@@ -13,7 +13,9 @@ logging.basicConfig(level=logging.INFO)
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
 
 # Open de camera
-capture = cv2.VideoCapture(0)
+# capture = cv2.VideoCapture(0)
+
+capture = cv2.VideoCapture(0, cv2.CAP_V4L2) # ✅ Gebruik V4L2 om de camera te openen
 if not capture.isOpened():
     raise RuntimeError("❌ Kan de camera niet openen!")
 
