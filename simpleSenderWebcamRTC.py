@@ -1,7 +1,7 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 
