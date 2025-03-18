@@ -43,22 +43,26 @@ class CameraStreamTrack(VideoStreamTrack):
         return timestamp, 90000  # 90 kHz tijdsbase        
 
     async def recv(self):
-        """ Leest een frame van de camera en stuurt het naar de client. """
+        while True:
+            try:
+                ret, frame = capture.read()
+                if not ret:
+                    logging.warning("⚠️ Kan geen frame ophalen! Probeer opnieuw...")
+                    await asyncio.sleep(0.1)  # Wacht even en probeer opnieuw
+                    continue
 
-        ret, frame = capture.read()
-        if not ret:
-            logging.error("❌ Kan geen frame ophalen van de camera!")
-            raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
+                frame = cv2.resize(frame, (WIDTH, HEIGHT))
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        frame = cv2.resize(frame, (WIDTH, HEIGHT))
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+                video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+                video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = await self.next_timestamp()
+                logging.info("📡 Frame verzonden naar client")
+                return video_frame
 
-        #logging.info("📡 Frame gegenereerd en verzonden naar client")  # ✅ Nu wordt logging correct uitgevoerd
-        return video_frame
-
+            except Exception as e:
+                logging.error(f"❌ Fout in `recv()`: {e}")
+                await asyncio.sleep(0.1)  # Wacht even en probeer opnieuw
 async def run():
     """ Verbindt met de WebRTC signaling server en verstuurt video. """
     

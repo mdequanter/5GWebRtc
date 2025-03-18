@@ -94,6 +94,10 @@ async def run():
     dummy_video_track = DummyVideoTrack()
     pc.addTrack(dummy_video_track)
 
+    @pc.on("connectionstatechange")
+    async def on_connection_state_change():
+        logging.info(f"🔗 WebRTC status veranderd naar: {pc.connectionState}")
+
     @pc.on("track")
     def on_track(track):
         logging.info(f"📡 Ontvangen video track: {track.kind}")
