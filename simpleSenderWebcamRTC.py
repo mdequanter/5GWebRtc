@@ -5,6 +5,7 @@ from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStrea
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 import time
+from aiortc.codecs import get_capabilities
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
@@ -58,7 +59,12 @@ async def run():
 
     # ✅ Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
-    pc.addTransceiver("video", direction="sendonly", codec_preferences=["video/VP8"])
+    #pc.addTransceiver("video", direction="sendonly")
+    
+    transceiver = pc.addTransceiver("video", direction="sendonly")
+
+    video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
+    transceiver.setCodecPreferences(video_codecs)
 
     try:
         await signaling.connect()
