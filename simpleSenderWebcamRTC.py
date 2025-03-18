@@ -28,7 +28,8 @@ class CameraStreamTrack(VideoStreamTrack):
     
     def __init__(self):
         super().__init__()
-
+        self.start_time = time.time()
+        self.frame_count = 0  # ✅ Zorg ervoor dat frame_count correct is gedefinieerd
 
     async def next_timestamp(self):
         """ Genereert een correcte timestamp voor het frame. """
@@ -36,20 +37,21 @@ class CameraStreamTrack(VideoStreamTrack):
         timestamp = int((time.time() - self.start_time) * 90000)
         return timestamp, 90000  # 90 kHz tijdsbase        
 
-        async def recv(self):
-            ret, frame = capture.read()
-            if not ret:
-                logging.error("❌ Kan geen frame ophalen van de camera!")
-                raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
+    async def recv(self):
+        """ Leest een frame van de camera en stuurt het naar de client. """
+        ret, frame = capture.read()
+        if not ret:
+            logging.error("❌ Kan geen frame ophalen van de camera!")
+            raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
 
-            frame = cv2.resize(frame, (WIDTH, HEIGHT))
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+        frame = cv2.resize(frame, (WIDTH, HEIGHT))
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
 
-            video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-            video_frame.pts, video_frame.time_base = await self.next_timestamp()
-            logging.info("📡 Frame gegenereerd en verzonden naar client")
-            return video_frame
+        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+        video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
+        logging.info("📡 Frame gegenereerd en verzonden naar client")  # ✅ Nu wordt logging correct uitgevoerd
+        return video_frame
 
 async def run():
     """ Verbindt met de WebRTC signaling server en verstuurt video. """
