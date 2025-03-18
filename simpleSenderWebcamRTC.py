@@ -1,15 +1,13 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
 
-# Signaling server
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
 
 # Open de camera
@@ -46,31 +44,28 @@ class CameraStreamTrack(VideoStreamTrack):
 async def run():
     """ Verbindt met de WebRTC signaling server en verstuurt video. """
     
-    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
-    #pc = RTCPeerConnection()
     configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
-    pc = RTCPeerConnection(configuration)    
-    receiver = VideoReceiver()
+    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
+    pc = RTCPeerConnection(configuration)
 
-    # Voeg de camera toe als een video-track
+    # ✅ Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
     pc.addTrack(video_track)
 
     try:
-        # Maak verbinding met de signaling server
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Wachten op een client...")
 
         while True:
             obj = await signaling.receive()
-            if isinstance(obj, RTCSessionDescription):
+            if isinstance(obj, dict) and "sdp" in obj:
                 logging.info("📡 WebRTC Client Verbonden! Start Streaming...")
 
                 # Zet de Remote Description en stuur een antwoord (SDP)
-                await pc.setRemoteDescription(obj)
+                await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
                 answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
-                await signaling.send(pc.localDescription)
+                await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
             elif obj is None:
                 break
@@ -79,7 +74,6 @@ async def run():
         logging.error(f"❌ Fout opgetreden: {e}")
 
     finally:
-        # Sluit de WebRTC-verbinding correct af
         logging.info("🛑 WebRTC verbinding sluiten...")
         await pc.close()
         await signaling.close()
