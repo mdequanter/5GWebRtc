@@ -2,31 +2,39 @@ import asyncio
 import cv2
 import logging
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.signaling import WebSocketSignaling
 from av import VideoFrame
+from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket signaling
 
+# Logging instellen
 logging.basicConfig(level=logging.INFO)
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Verbindt met jouw bestaande signaling server
+# Signaling server
+SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
 
 # Open de camera
 capture = cv2.VideoCapture(0)
-width, height = 640, 480
-capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+if not capture.isOpened():
+    raise RuntimeError("❌ Kan de camera niet openen!")
+
+# Instellingen voor resolutie
+WIDTH, HEIGHT = 640, 480
+capture.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+capture.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
 
 
 class CameraStreamTrack(VideoStreamTrack):
-    """ Een WebRTC-videostream die frames van de camera haalt. """
+    """ WebRTC VideoStream die frames van de camera haalt en verzendt. """
+    
     def __init__(self):
         super().__init__()
 
     async def recv(self):
         ret, frame = capture.read()
         if not ret:
+            logging.error("❌ Kan geen frame ophalen van de camera!")
             raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
 
-        frame = cv2.resize(frame, (width, height))  
+        frame = cv2.resize(frame, (WIDTH, HEIGHT))
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
 
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
@@ -36,29 +44,48 @@ class CameraStreamTrack(VideoStreamTrack):
 
 async def run():
     """ Verbindt met de WebRTC signaling server en verstuurt video. """
-    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
+    
+    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     pc = RTCPeerConnection()
-    pc.addTrack(CameraStreamTrack())
 
-    await signaling.connect()
-    print("✅ Verbonden met WebRTC Signaling Server... Wachten op een client...")
+    # Voeg de camera toe als een video-track
+    video_track = CameraStreamTrack()
+    pc.addTrack(video_track)
 
-    while True:
-        obj = await signaling.receive()
-        if isinstance(obj, RTCSessionDescription):
-            print("📡 WebRTC Client Verbonden! Start Streaming...")
+    try:
+        # Maak verbinding met de signaling server
+        await signaling.connect()
+        logging.info("✅ Verbonden met WebRTC Signaling Server... Wachten op een client...")
 
-            await pc.setRemoteDescription(obj)
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
-            await signaling.send(pc.localDescription)
+        while True:
+            obj = await signaling.receive()
+            if isinstance(obj, RTCSessionDescription):
+                logging.info("📡 WebRTC Client Verbonden! Start Streaming...")
 
-        elif obj is None:
-            break
+                # Zet de Remote Description en stuur een antwoord (SDP)
+                await pc.setRemoteDescription(obj)
+                answer = await pc.createAnswer()
+                await pc.setLocalDescription(answer)
+                await signaling.send(pc.localDescription)
 
-    await pc.close()
-    await signaling.close()
+            elif obj is None:
+                break
+
+    except Exception as e:
+        logging.error(f"❌ Fout opgetreden: {e}")
+
+    finally:
+        # Sluit de WebRTC-verbinding correct af
+        logging.info("🛑 WebRTC verbinding sluiten...")
+        await pc.close()
+        await signaling.close()
+        capture.release()
+        logging.info("✅ Camera vrijgegeven en WebRTC gestopt.")
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        logging.info("🛑 Handmatige onderbreking. Programma wordt afgesloten.")
+        capture.release()
