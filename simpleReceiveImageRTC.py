@@ -85,9 +85,6 @@ async def run():
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection(configuration)
   
-
-    pc.addTransceiver("video", direction="recvonly", codec_preferences=["video/VP8"])
-
   
     receiver = VideoReceiver()
 
@@ -100,12 +97,12 @@ async def run():
     @pc.on("track")
     def on_track(track):
         logging.info(f"📡 Ontvangen video track: {track.kind}")
-
         if track.kind == "video":
             async def receive_video():
                 while True:
                     try:
                         frame = await track.recv()
+                        exit("In loop try")
                         receiver.process_frame(frame)
                     except Exception as e:
                         logging.error(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
@@ -131,7 +128,7 @@ async def run():
 
         logging.info("✅ WebRTC-verbinding is succesvol tot stand gekomen!")
 
-        await asyncio.sleep(10)  # Laat de verbinding open om video te ontvangen
+        await asyncio.sleep(30)  # Laat de verbinding open om video te ontvangen
 
     except Exception as e:
         logging.error(f"❌ Fout opgetreden: {e}")

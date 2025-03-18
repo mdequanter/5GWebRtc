@@ -47,6 +47,7 @@ class CameraStreamTrack(VideoStreamTrack):
 
             video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
             video_frame.pts, video_frame.time_base = await self.next_timestamp()
+            logging.info("📡 Frame gegenereerd en verzonden naar client")
             return video_frame
 
 
@@ -60,7 +61,7 @@ async def run():
     # ✅ Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
     #pc.addTransceiver("video", direction="sendonly")
-    
+
     transceiver = pc.addTransceiver("video", direction="sendonly")
 
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
