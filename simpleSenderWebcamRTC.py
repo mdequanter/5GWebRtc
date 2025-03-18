@@ -58,7 +58,7 @@ async def run():
 
     # ✅ Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
-    pc.addTransceiver("video", direction="sendonly")
+    pc.addTransceiver("video", direction="sendonly", codec_preferences=["video/VP8"])
 
     try:
         await signaling.connect()

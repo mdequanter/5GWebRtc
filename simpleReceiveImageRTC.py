@@ -84,7 +84,14 @@ async def run():
     configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection(configuration)
+  
+
+    pc.addTransceiver("video", direction="recvonly", codec_preferences=["video/VP8"])
+
+  
     receiver = VideoReceiver()
+
+
 
     # ✅ Dummy video track toevoegen om een correct offer te maken
     dummy_video_track = DummyVideoTrack()
@@ -101,10 +108,9 @@ async def run():
                         frame = await track.recv()
                         receiver.process_frame(frame)
                     except Exception as e:
-                        logging.error(f"❌ Fout bij video-ontvangst: {e}")
+                        logging.error(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
 
             asyncio.create_task(receive_video())
-
     try:
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
