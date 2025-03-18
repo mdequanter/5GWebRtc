@@ -4,6 +4,7 @@ import logging
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +48,9 @@ async def run():
     
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     #pc = RTCPeerConnection()
-    pc = RTCPeerConnection({"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
+    configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+    pc = RTCPeerConnection(configuration)    
+    receiver = VideoReceiver()
 
     # Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
