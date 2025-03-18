@@ -1,64 +1,89 @@
 import asyncio
+import json
+import websockets
+import time
 import cv2
-import logging
-from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
-from aiortc.contrib.signaling import WebSocketSignaling
-from av import VideoFrame
+import base64
+import io
+from PIL import Image
 
-logging.basicConfig(level=logging.INFO)
+SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Replace with your server IP
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Verbindt met jouw bestaande signaling server
+# Define JPEG quality level (adjustable)
+JPEG_QUALITY = 90  # Adjust as needed (100 = best quality, 50 = balanced, 25 = max compression)
 
-# Open de camera
+# Open the camera (0 is usually the default webcam)
 capture = cv2.VideoCapture(0)
-width, height = 640, 480
-capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+width = 640
+height = 480
 
+async def send_messages():
+    async with websockets.connect(SIGNALING_SERVER) as websocket:
+        print(f"✅ Connected to Signaling Server: {SIGNALING_SERVER}")
+        
+        while True:
+            ret, frame = capture.read()
+            if not ret:
+                print("❌ Could not retrieve frame from the camera")
+                continue
 
-class CameraStreamTrack(VideoStreamTrack):
-    """ Een WebRTC-videostream die frames van de camera haalt. """
-    def __init__(self):
-        super().__init__()
+            # Resize to 640x480 pixels
+            frame = cv2.resize(frame, (width, height))
 
-    async def recv(self):
-        ret, frame = capture.read()
-        if not ret:
-            raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
+            # Get timestamp
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        frame = cv2.resize(frame, (width, height))  
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+            # Convert OpenCV frame (with text) to PIL Image
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
+            pil_image = Image.fromarray(frame_rgb)
 
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = self.next_timestamp()
-        return video_frame
+            # Compress using Pillow to in-memory JPEG
+            compressed_image_io = io.BytesIO()
+            start_time = time.time()
+            pil_image.save(compressed_image_io, format="JPEG", quality=JPEG_QUALITY)
+            end_time = time.time()
 
+            # Get compressed image bytes
+            compressed_bytes = compressed_image_io.getvalue()
+            compressed_size_kb = len(compressed_bytes) / 1024  # Convert to KB
+            compression_time_ms = (end_time - start_time) * 1000  # Convert to milliseconds
 
-async def run():
-    """ Verbindt met de WebRTC signaling server en verstuurt video. """
-    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
-    pc = RTCPeerConnection()
-    pc.addTrack(CameraStreamTrack())
+            # Overlay metadata on the frame **BEFORE COMPRESSION**
+            cv2.putText(frame, f"Time: {timestamp}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Resolution: {width}x{height}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Size: {round(compressed_size_kb, 2)} KB", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Comp. Time/Quality: {round(compression_time_ms, 2)} ms / {JPEG_QUALITY}%", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-    await signaling.connect()
-    print("✅ Verbonden met WebRTC Signaling Server... Wachten op een client...")
+            # Convert annotated OpenCV frame to Pillow image again
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
 
-    while True:
-        obj = await signaling.receive()
-        if isinstance(obj, RTCSessionDescription):
-            print("📡 WebRTC Client Verbonden! Start Streaming...")
+            # Recompress the frame (with text overlay) using Pillow
+            final_compressed_image_io = io.BytesIO()
+            pil_image.save(final_compressed_image_io, format="JPEG", quality=JPEG_QUALITY)
+            final_compressed_bytes = final_compressed_image_io.getvalue()
 
-            await pc.setRemoteDescription(obj)
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
-            await signaling.send(pc.localDescription)
+            # Convert to base64
+            encoded_string = base64.b64encode(final_compressed_bytes).decode("utf-8")
 
-        elif obj is None:
-            break
+            # Add metadata to JSON message
+            message = {
+                "type": "test",
+                "data": encoded_string,  # Now sending the compressed image from Pillow
+                "timestamp": timestamp,
+                "resolution": f"{width}x{height}",
+                "size_kb": round(compressed_size_kb, 2),
+                "compression_time_ms": round(compression_time_ms, 2)
+            }
 
-    await pc.close()
-    await signaling.close()
+            # Send JSON message via WebSocket
+            await websocket.send(json.dumps(message))
+            await asyncio.sleep(0.001)  # Wait 50ms for the next frame
 
-
-if __name__ == "__main__":
-    asyncio.run(run())
+# Start the async loop
+try:
+    asyncio.run(send_messages())
+except KeyboardInterrupt:
+    print("⏹️ Stopping...")
+    capture.release()
+    cv2.destroyAllWindows()
