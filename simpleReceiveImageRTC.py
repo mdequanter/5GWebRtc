@@ -2,12 +2,13 @@ import asyncio
 import cv2
 import logging
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.signaling import TcpSocketSignaling
+from aiortc.contrib.signaling import WebSocketSignaling
 from av import VideoFrame
 
 logging.basicConfig(level=logging.INFO)
 
-TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Beeldresolutie aanpassen
+SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Verbindt met jouw bestaande signaling server
+TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
 
 class VideoReceiver:
     """ Klasse voor het ontvangen en tonen van WebRTC-videostream. """
@@ -19,10 +20,10 @@ class VideoReceiver:
     def process_frame(self, frame: VideoFrame):
         """ Converteert WebRTC-frame naar OpenCV-afbeelding en toont het. """
         image = frame.to_ndarray(format="rgb24")
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)  # WebRTC gebruikt RGB, OpenCV BGR
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
 
-        # FPS-berekening
+        # FPS berekening
         self.message_count += 1
         current_time = asyncio.get_event_loop().time()
         elapsed_time = current_time - self.last_time
@@ -41,8 +42,8 @@ class VideoReceiver:
 
 
 async def run():
-    """ Verbindt met WebRTC-server en toont video. """
-    signaling = TcpSocketSignaling("94.111.36.87", 9000)  # Pas IP aan
+    """ Verbindt met de WebRTC-server en toont video. """
+    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection()
     receiver = VideoReceiver()
 
@@ -71,6 +72,7 @@ async def run():
 
     await pc.wait_for_connection_state("closed")
     await signaling.close()
+
 
 if __name__ == "__main__":
     asyncio.run(run())
