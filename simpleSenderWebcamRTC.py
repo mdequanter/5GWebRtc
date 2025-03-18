@@ -60,11 +60,10 @@ async def run():
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     pc = RTCPeerConnection(configuration)
 
-    # ✅ Voeg de camera toe als een video-track
-    video_track = CameraStreamTrack()
-    #pc.addTransceiver("video", direction="sendonly")
 
     transceiver = pc.addTransceiver("video", direction="sendonly")
+    video_track = CameraStreamTrack()  # ✅ Zorg ervoor dat een CameraStreamTrack-object wordt aangemaakt
+    pc.addTrack(video_track, transceiver=transceiver)  # ✅ Koppel de video-track expliciet
 
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
