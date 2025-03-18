@@ -71,7 +71,7 @@ async def run():
     
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     #pc = RTCPeerConnection()
-    pc = RTCPeerConnection(configuration={"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
+    pc = RTCPeerConnection({"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
     receiver = VideoReceiver()
 
     # ✅ Dummy video track toevoegen om een correct offer te maken

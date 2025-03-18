@@ -47,7 +47,7 @@ async def run():
     
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     #pc = RTCPeerConnection()
-    pc = RTCPeerConnection(configuration={"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
+    pc = RTCPeerConnection({"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
 
     # Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
