@@ -57,7 +57,7 @@ class CameraStreamTrack(VideoStreamTrack):
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-        logging.info("📡 Frame gegenereerd en verzonden naar client")  # ✅ Nu wordt logging correct uitgevoerd
+        #logging.info("📡 Frame gegenereerd en verzonden naar client")  # ✅ Nu wordt logging correct uitgevoerd
         return video_frame
 
 async def run():

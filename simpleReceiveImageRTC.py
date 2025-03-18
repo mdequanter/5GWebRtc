@@ -104,8 +104,8 @@ async def run():
                         frame = await track.recv()
                         receiver.process_frame(frame)
                     except Exception as e:
-                        logging.warning(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
-                        await asyncio.sleep(0.1) 
+                        continue
+                        logging.info(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
 
             asyncio.create_task(receive_video())
     try:
