@@ -1,11 +1,10 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
-
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection
+import time
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
@@ -19,12 +18,22 @@ class DummyVideoTrack(MediaStreamTrack):
 
     kind = "video"
 
+    def __init__(self):
+        super().__init__()
+        self.start_time = time.time()
+        self.frame_count = 0
+
     async def recv(self):
         """ Lege zwarte frame verzenden als dummy video track. """
-        frame = VideoFrame(width=TARGET_WIDTH, height=TARGET_HEIGHT, format="rgb24")
+        frame = VideoFrame(width=640, height=480, format="rgb24")
         frame.pts, frame.time_base = self.next_timestamp()
         return frame
 
+    def next_timestamp(self):
+        """ Genereert een correcte timestamp voor het frame. """
+        self.frame_count += 1
+        timestamp = int((time.time() - self.start_time) * 90000)
+        return timestamp, 90000  # 90 kHz tijdsbase
 
 class VideoReceiver:
     """ Klasse voor het ontvangen en tonen van WebRTC-videostream. """
@@ -58,24 +67,23 @@ class VideoReceiver:
         cv2.waitKey(1)
 
 
-def sdp_to_json(description):
-    """ Zet RTCSessionDescription om naar een JSON-compatibel object. """
-    return {"sdp": description.sdp, "type": description.type}
-
-
-def json_to_sdp(data):
-    """ Zet een JSON-bericht om naar een RTCSessionDescription. """
-    return RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+async def wait_for_ice(pc):
+    """ Wacht tot de ICE-verbinding correct tot stand komt. """
+    for _ in range(10):  # Geef maximaal 10 seconden om verbinding te maken
+        if pc.iceConnectionState in ["connected", "completed"]:
+            logging.info("✅ ICE-verbinding tot stand gebracht!")
+            return True
+        await asyncio.sleep(1)
+    logging.error("❌ ICE-verbinding is mislukt!")
+    return False
 
 
 async def run():
     """ Verbindt met de WebRTC-server en toont video. """
     
-    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
-    #pc = RTCPeerConnection()
-
     configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
-    pc = RTCPeerConnection(configuration)    
+    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
+    pc = RTCPeerConnection(configuration)
     receiver = VideoReceiver()
 
     # ✅ Dummy video track toevoegen om een correct offer te maken
@@ -104,14 +112,20 @@ async def run():
         # ✅ Nu kan een offer correct worden gecreëerd
         offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
-        await signaling.send(sdp_to_json(pc.localDescription))  # ✅ SDP als JSON versturen
+        await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
         # ✅ Wachten op antwoord van de sender (server)
         obj = await signaling.receive()
         if isinstance(obj, dict) and "sdp" in obj:
-            await pc.setRemoteDescription(json_to_sdp(obj))  # ✅ SDP JSON terug omzetten naar RTCSessionDescription
+            await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
 
-        await pc.wait_for_connection_state("closed")
+        # ✅ Wachten tot ICE is verbonden
+        if not await wait_for_ice(pc):
+            raise Exception("ICE-verbinding mislukt!")
+
+        logging.info("✅ WebRTC-verbinding is succesvol tot stand gekomen!")
+
+        await asyncio.sleep(10)  # Laat de verbinding open om video te ontvangen
 
     except Exception as e:
         logging.error(f"❌ Fout opgetreden: {e}")

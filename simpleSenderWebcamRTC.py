@@ -4,6 +4,7 @@ import logging
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
+import time
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
@@ -27,18 +28,25 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self):
         super().__init__()
 
-    async def recv(self):
-        ret, frame = capture.read()
-        if not ret:
-            logging.error("❌ Kan geen frame ophalen van de camera!")
-            raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
 
-        frame = cv2.resize(frame, (WIDTH, HEIGHT))
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+    async def next_timestamp(self):
+        """ Genereert een correcte timestamp voor het frame. """
+        self.frame_count += 1
+        timestamp = int((time.time() - self.start_time) * 90000)
+        return timestamp, 90000  # 90 kHz tijdsbase        
 
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = self.next_timestamp()
-        return video_frame
+        async def recv(self):
+            ret, frame = capture.read()
+            if not ret:
+                logging.error("❌ Kan geen frame ophalen van de camera!")
+                raise RuntimeError("❌ Kan geen frame ophalen van de camera!")
+
+            frame = cv2.resize(frame, (WIDTH, HEIGHT))
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+
+            video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+            video_frame.pts, video_frame.time_base = await self.next_timestamp()
+            return video_frame
 
 
 async def run():
@@ -50,7 +58,7 @@ async def run():
 
     # ✅ Voeg de camera toe als een video-track
     video_track = CameraStreamTrack()
-    pc.addTrack(video_track)
+    pc.addTransceiver("video", direction="sendonly")
 
     try:
         await signaling.connect()
