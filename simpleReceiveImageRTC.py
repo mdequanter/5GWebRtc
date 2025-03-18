@@ -1,17 +1,32 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.signaling import WebSocketSignaling
+from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from av import VideoFrame
+from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 
+# Logging instellen
 logging.basicConfig(level=logging.INFO)
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Verbindt met jouw bestaande signaling server
+SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
+
+
+class DummyVideoTrack(MediaStreamTrack):
+    """ Dummy video track om WebRTC offer te laten werken. """
+
+    kind = "video"
+
+    async def recv(self):
+        """ Lege zwarte frame verzenden als dummy video track. """
+        frame = VideoFrame(width=TARGET_WIDTH, height=TARGET_HEIGHT, format="rgb24")
+        frame.pts, frame.time_base = self.next_timestamp()
+        return frame
+
 
 class VideoReceiver:
     """ Klasse voor het ontvangen en tonen van WebRTC-videostream. """
+    
     def __init__(self):
         self.fps_display = 0
         self.message_count = 0
@@ -41,38 +56,73 @@ class VideoReceiver:
         cv2.waitKey(1)
 
 
+def sdp_to_json(description):
+    """ Zet RTCSessionDescription om naar een JSON-compatibel object. """
+    return {"sdp": description.sdp, "type": description.type}
+
+
+def json_to_sdp(data):
+    """ Zet een JSON-bericht om naar een RTCSessionDescription. """
+    return RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+
+
 async def run():
     """ Verbindt met de WebRTC-server en toont video. """
+    
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
-    pc = RTCPeerConnection()
+    #pc = RTCPeerConnection()
+    pc = RTCPeerConnection(configuration={"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
     receiver = VideoReceiver()
+
+    # ✅ Dummy video track toevoegen om een correct offer te maken
+    dummy_video_track = DummyVideoTrack()
+    pc.addTrack(dummy_video_track)
 
     @pc.on("track")
     def on_track(track):
-        print(f"📡 Ontvangen video track: {track.kind}")
+        logging.info(f"📡 Ontvangen video track: {track.kind}")
 
         if track.kind == "video":
             async def receive_video():
                 while True:
-                    frame = await track.recv()
-                    receiver.process_frame(frame)
+                    try:
+                        frame = await track.recv()
+                        receiver.process_frame(frame)
+                    except Exception as e:
+                        logging.error(f"❌ Fout bij video-ontvangst: {e}")
 
             asyncio.create_task(receive_video())
 
-    await signaling.connect()
-    print("✅ Verbonden met WebRTC Signaling Server... Wachten op video...")
+    try:
+        await signaling.connect()
+        logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
 
-    offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
-    await signaling.send(pc.localDescription)
+        # ✅ Nu kan een offer correct worden gecreëerd
+        offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        await signaling.send(sdp_to_json(pc.localDescription))  # ✅ SDP als JSON versturen
 
-    obj = await signaling.receive()
-    if isinstance(obj, RTCSessionDescription):
-        await pc.setRemoteDescription(obj)
+        # ✅ Wachten op antwoord van de sender (server)
+        obj = await signaling.receive()
+        if isinstance(obj, dict) and "sdp" in obj:
+            await pc.setRemoteDescription(json_to_sdp(obj))  # ✅ SDP JSON terug omzetten naar RTCSessionDescription
 
-    await pc.wait_for_connection_state("closed")
-    await signaling.close()
+        await pc.wait_for_connection_state("closed")
+
+    except Exception as e:
+        logging.error(f"❌ Fout opgetreden: {e}")
+
+    finally:
+        logging.info("🛑 WebRTC verbinding sluiten...")
+        await pc.close()
+        await signaling.close()
+        cv2.destroyAllWindows()
+        logging.info("✅ WebRTC gestopt en venster gesloten.")
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        logging.info("🛑 Handmatige onderbreking. Programma wordt afgesloten.")
+        cv2.destroyAllWindows()
