@@ -102,10 +102,10 @@ async def run():
                 while True:
                     try:
                         frame = await track.recv()
-                        exit("In loop try")
                         receiver.process_frame(frame)
                     except Exception as e:
-                        logging.error(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
+                        logging.warning(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
+                        await asyncio.sleep(0.1) 
 
             asyncio.create_task(receive_video())
     try:
