@@ -68,7 +68,6 @@ async def run():
     pc = RTCPeerConnection(configuration)
 
     # ✅ Voeg de camera toe als een video-track
-    video_track = CameraStreamTrack()
     #pc.addTransceiver("video", direction="sendonly")
     
 
@@ -76,6 +75,10 @@ async def run():
 
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
+
+    video_track = CameraStreamTrack()
+
+    pc.addTrack(video_track)
 
     try:
         await signaling.connect()
