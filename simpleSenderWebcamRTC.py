@@ -44,7 +44,6 @@ class CameraStreamTrack(VideoStreamTrack):
 
     async def recv(self):
         """ Leest een frame van de camera en stuurt het naar de client. """
-        logging.error("Start lezen frames")
 
         ret, frame = capture.read()
         if not ret:
