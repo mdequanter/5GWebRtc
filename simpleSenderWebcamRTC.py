@@ -25,11 +25,14 @@ capture.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
 
 class CameraStreamTrack(VideoStreamTrack):
     """ WebRTC VideoStream die frames van de camera haalt en verzendt. """
+
+
     
     def __init__(self):
         super().__init__()
         self.start_time = time.time()
         self.frame_count = 0  # ✅ Zorg ervoor dat frame_count correct is gedefinieerd
+        logging.info("✅ Video track is toegevoegd aan peer connection!")
 
     async def next_timestamp(self):
         """ Genereert een correcte timestamp voor het frame. """
