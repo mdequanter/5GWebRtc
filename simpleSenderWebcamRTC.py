@@ -3,7 +3,7 @@ import cv2
 import logging
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 from av import VideoFrame
-from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket signaling
+from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
