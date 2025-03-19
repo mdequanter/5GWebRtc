@@ -6,11 +6,14 @@ from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 import time
 from aiortc.codecs import get_capabilities
+import numpy as np
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
+#SIGNALING_SERVER = "ws://192.168.1.29:9000"  # ✅ Jouw bestaande signaling server
+
 
 # Open de camera
 # capture = cv2.VideoCapture(0)
@@ -36,6 +39,26 @@ class CameraStreamTrack(VideoStreamTrack):
         self.frame_count = 0  # ✅ Zorg ervoor dat frame_count correct is gedefinieerd
         logging.info("✅ Video track is toegevoegd aan peer connection!")
 
+
+    def apply_shuffle(frame):
+        """ Past een vooraf bepaalde shuffle-index toe. """
+        height, width, _ = frame.shape
+        flat_frame = frame.reshape(-1, 3)
+        shuffled = flat_frame[SHUFFLE_INDEX % len(flat_frame)]
+        return shuffled.reshape(height, width, 3)
+
+
+    def processFrame(self, frame):
+        # Get timestamp
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+        # Overlay metadata on the original frame (before encryption)
+        cv2.putText(frame, f"Time: {timestamp}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, f"Resolution: {WIDTH}x{WIDTH}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+        return frame
+
+
     async def next_timestamp(self):
         """ Genereert een correcte timestamp voor het frame. """
         self.frame_count += 1
@@ -52,12 +75,17 @@ class CameraStreamTrack(VideoStreamTrack):
                     continue
 
                 frame = cv2.resize(frame, (WIDTH, HEIGHT))
+
+                frame = self.processFrame(frame)
+
+
+
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
                 video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
                 video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-                logging.info("📡 Frame verzonden naar client")
+                #logging.info("📡 Frame verzonden naar client")
                 return video_frame
 
             except Exception as e:

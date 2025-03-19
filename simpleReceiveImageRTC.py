@@ -10,6 +10,8 @@ import time
 logging.basicConfig(level=logging.INFO)
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
+#SIGNALING_SERVER = "ws://192.168.1.29:9000"  # ✅ Jouw bestaande signaling server
+
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
 
 
@@ -84,19 +86,14 @@ async def run():
     configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection(configuration)
-  
-  
     receiver = VideoReceiver()
-
-
-
-    # ✅ Dummy video track toevoegen om een correct offer te maken
     dummy_video_track = DummyVideoTrack()
     pc.addTrack(dummy_video_track)
 
     @pc.on("connectionstatechange")
     async def on_connection_state_change():
-        logging.info(f"🔗 WebRTC status veranderd naar: {pc.connectionState}")
+        logging.info(f"🔗 WebRTC status veranderd")
+
 
     @pc.on("track")
     def on_track(track):
@@ -132,22 +129,24 @@ async def run():
 
         logging.info("✅ WebRTC-verbinding is succesvol tot stand gekomen!")
 
-        await asyncio.sleep(30)  # Laat de verbinding open om video te ontvangen
-
+        # await asyncio.sleep(30)  # Laat de verbinding open om video te ontvangen
+        while True:
+            await asyncio.sleep(1)
     except Exception as e:
         logging.error(f"❌ Fout opgetreden: {e}")
-
+    
     finally:
         logging.info("🛑 WebRTC verbinding sluiten...")
         await pc.close()
         await signaling.close()
         cv2.destroyAllWindows()
         logging.info("✅ WebRTC gestopt en venster gesloten.")
-
+    
 
 if __name__ == "__main__":
     try:
         asyncio.run(run())
     except KeyboardInterrupt:
         logging.info("🛑 Handmatige onderbreking. Programma wordt afgesloten.")
+
         cv2.destroyAllWindows()
