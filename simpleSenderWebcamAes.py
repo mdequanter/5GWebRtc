@@ -14,7 +14,7 @@ import os
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Vervang door je server IP
 
-if len(sys.argv) > 2:
+if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
 print(f"Signaling Server: {SIGNALING_SERVER}")
