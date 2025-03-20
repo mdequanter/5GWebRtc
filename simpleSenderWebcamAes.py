@@ -83,12 +83,6 @@ async def send_messages():
             compressed_size_kb = len(compressed_bytes) / 1024  # Omzetten naar KB
             compression_time_ms = (end_time - start_time) * 1000  # Omzetten naar ms
 
-            # Oorspronkelijke afbeelding annoteren met metadata
-            cv2.putText(frame, f"Time: {timestamp}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, f"Resolution: {width}x{height}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, f"Size: {round(compressed_size_kb, 2)} KB", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, f"Comp. Time/Quality: {round(compression_time_ms, 2)} ms / {JPEG_QUALITY}%", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
             # Annotated OpenCV frame opnieuw naar Pillow converteren
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             pil_image = Image.fromarray(frame_rgb)
