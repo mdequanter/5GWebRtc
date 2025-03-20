@@ -20,7 +20,7 @@ if len(sys.argv) > 1:
 print(f"Signaling Server: {SIGNALING_SERVER}")
 
 # Definieer JPEG-kwaliteitsniveau
-JPEG_QUALITY = 90
+JPEG_QUALITY = 50
 
 # Open de camera
 capture = cv2.VideoCapture(0)
