@@ -12,10 +12,10 @@ from cryptography.hazmat.backends import default_backend
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Vervang door je server IP
 
-if len(sys.argv[1]) > 5:
+
+if len(sys.argv) > 2:
     SIGNALING_SERVER = sys.argv[1]
 
-print(f"Signaling Server: {SIGNALING_SERVER}")
 
 
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente afmetingen
