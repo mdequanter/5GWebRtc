@@ -12,8 +12,11 @@ from cryptography.hazmat.backends import default_backend
 import os
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Vervang door je server IP
-SIGNALING_SERVER = "ws://192.168.1.29:9000"  # Vervang door je server IP
 
+if len(sys.argv[1]) > 5:
+    SIGNALING_SERVER = sys.argv[1]
+
+print(f"Signaling Server: {SIGNALING_SERVER}")
 
 # Definieer JPEG-kwaliteitsniveau
 JPEG_QUALITY = 90
@@ -45,9 +48,6 @@ def encrypt_data(plain_text):
     # Einde tijdmeting voor encryptie
     encrypt_end_time = time.time()
     encryption_time_ms = (encrypt_end_time - encrypt_start_time) * 1000  # Omzetten naar ms
-
-    print(f"encryptie tijd: {encryption_time_ms} ms")
-
 
     return base64.b64encode(iv + encrypted_data).decode('utf-8'), encryption_time_ms  # IV meesturen voor decryptie
 

@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import json
 import websockets
@@ -10,7 +11,11 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
 
 SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Vervang door je server IP
-SIGNALING_SERVER = "ws://192.168.1.29:9000"  # Vervang door je server IP
+
+if len(sys.argv[1]) > 5:
+    SIGNALING_SERVER = sys.argv[1]
+
+print(f"Signaling Server: {SIGNALING_SERVER}")
 
 
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente afmetingen
