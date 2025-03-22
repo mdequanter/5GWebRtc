@@ -6,11 +6,16 @@ import cv2
 import base64
 import io
 from PIL import Image
+import sys
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Replace with your server IP
+SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"  # Vervang door je server IP
+if len(sys.argv) > 1:
+    SIGNALING_SERVER = sys.argv[1]
+
+
 
 # Define JPEG quality level (adjustable)
-JPEG_QUALITY = 90  # Adjust as needed (100 = best quality, 50 = balanced, 25 = max compression)
+JPEG_QUALITY = 50  # Adjust as needed (100 = best quality, 50 = balanced, 25 = max compression)
 
 # Open the camera (0 is usually the default webcam)
 capture = cv2.VideoCapture(0)

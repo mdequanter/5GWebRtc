@@ -5,8 +5,15 @@ import time
 import cv2
 import numpy as np
 import base64
+import sys
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Replace with your server IP
+
+SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"  # Vervang door je server IP
+if len(sys.argv) > 1:
+    SIGNALING_SERVER = sys.argv[1]
+
+
+
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Ensure consistent display size
 
 async def receive_messages():
