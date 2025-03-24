@@ -20,6 +20,10 @@ if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
 wantedFramerate = 15
+maxQuality = 60
+
+
+
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
 
@@ -82,8 +86,8 @@ async def receive_messages():
                 if (fps_display > wantedFramerate and frameCounter > 200): 
                     if current_time - last_executed_q >= 0.2:
                         quality += 10
-                        if (quality>100):
-                            quality = 100
+                        if (quality>maxQuality):
+                            quality = maxQuality
                         if (quality != lastQuality):
                             print(f"📉 verhoog kwaliteit naar {quality}")
                             await websocket.send(json.dumps({"quality": quality}))
