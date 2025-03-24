@@ -68,6 +68,7 @@ async def receive_messages():
                 message_count += 1
                 current_time = time.time()
                 elapsed_time = current_time - last_time
+                lastQuality = quality
 
                 current_time = time.time()
                 frame_times.append(current_time)
@@ -84,8 +85,10 @@ async def receive_messages():
                         quality += 10
                         if (quality>100):
                             quality = 100
-                        await websocket.send(json.dumps({"quality": quality}))
+                        if (quality != lastQuality):
+                            await websocket.send(json.dumps({"quality": quality}))
                         last_executed_q = current_time
+                        lastQuality = quality
 
                 # ✅ Automatisch kwaliteitsaanpassing sturen
                 if (fps_display < wantedFramerate - 2 and frameCounter > 200):
@@ -94,8 +97,10 @@ async def receive_messages():
                         quality -= 10
                         if (quality<1):
                             quality = 1
-                        await websocket.send(json.dumps({"quality": quality}))
+                        if (quality != lastQuality):
+                            await websocket.send(json.dumps({"quality": quality}))
                         last_executed_q = current_time
+                        lastQuality = quality
 
 
                 # ✅ Overlay info op beeld
