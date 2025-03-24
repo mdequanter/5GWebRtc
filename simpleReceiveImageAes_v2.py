@@ -19,7 +19,7 @@ SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"
 if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
-wantedFramerate = 20
+wantedFramerate = 16
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
 
@@ -78,7 +78,7 @@ async def receive_messages():
 
                 fps_display = len(frame_times)  # Aantal frames in de laatste seconde
                 # ✅ Automatisch kwaliteitsaanpassing sturen
-                if (fps_display > wantedFramerate + 5 and frameCounter > 1000): 
+                if (fps_display > wantedFramerate + 5 and frameCounter > 200): 
                     if current_time - last_executed_q >= 0.2:
                         print(f"📉 FPS is te hoog: {fps_display} → verhoog kwaliteit naar {quality + 1}")
                         quality += 5
@@ -88,7 +88,7 @@ async def receive_messages():
                         last_executed_q = current_time
 
                 # ✅ Automatisch kwaliteitsaanpassing sturen
-                if (fps_display < wantedFramerate - 5 and frameCounter > 1000):
+                if (fps_display < wantedFramerate - 5 and frameCounter > 200):
                     if current_time - last_executed_q >= 0.2:
                         print(f"📉 FPS is te laag: {fps_display} → verlaag kwaliteit")
                         quality -= 5
