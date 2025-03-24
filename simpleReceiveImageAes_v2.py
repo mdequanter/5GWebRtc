@@ -19,7 +19,7 @@ SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"
 if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
-wantedFramerate = 16
+wantedFramerate = 15
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
 
@@ -81,7 +81,7 @@ async def receive_messages():
                 if (fps_display > wantedFramerate + 2 and frameCounter > 200): 
                     if current_time - last_executed_q >= 0.2:
                         print(f"📉 FPS is te hoog: {fps_display} → verhoog kwaliteit naar {quality + 1}")
-                        quality += 5
+                        quality += 10
                         if (quality>100):
                             quality = 100
                         await websocket.send(json.dumps({"quality": quality}))
@@ -91,7 +91,7 @@ async def receive_messages():
                 if (fps_display < wantedFramerate - 2 and frameCounter > 200):
                     if current_time - last_executed_q >= 0.2:
                         print(f"📉 FPS is te laag: {fps_display} → verlaag kwaliteit")
-                        quality -= 5
+                        quality -= 10
                         if (quality<1):
                             quality = 1
                         await websocket.send(json.dumps({"quality": quality}))
