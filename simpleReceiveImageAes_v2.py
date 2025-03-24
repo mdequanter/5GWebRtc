@@ -80,7 +80,7 @@ async def receive_messages():
                 # ✅ Automatisch kwaliteitsaanpassing sturen
                 if (fps_display > wantedFramerate + 5 and frameCounter > 1000): 
                     if current_time - last_executed_q >= 0.2:
-                        #print(f"📉 FPS is te hoog: {fps_display} → verhoog kwaliteit naar {quality + 1}")
+                        print(f"📉 FPS is te hoog: {fps_display} → verhoog kwaliteit naar {quality + 1}")
                         quality += 5
                         if (quality>100):
                             quality = 100

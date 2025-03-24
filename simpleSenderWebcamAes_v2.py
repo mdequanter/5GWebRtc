@@ -24,8 +24,8 @@ JPEG_QUALITY = 50
 
 # Open de camera
 capture = cv2.VideoCapture(0)
-width = 1280
-height = 960
+width = 800
+height = 600
 
 # AES-256 sleutel (moet 32 bytes zijn, hier een voorbeeld, verander dit voor veiligheid)
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
