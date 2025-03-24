@@ -19,7 +19,7 @@ SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"
 if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
-wantedFramerate = 28
+wantedFramerate = 20
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
 
