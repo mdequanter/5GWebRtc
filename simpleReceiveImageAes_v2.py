@@ -81,11 +81,11 @@ async def receive_messages():
                 # ✅ Automatisch kwaliteitsaanpassing sturen
                 if (fps_display > wantedFramerate and frameCounter > 200): 
                     if current_time - last_executed_q >= 0.2:
-                        print(f"📉 FPS is te hoog: {fps_display} → verhoog kwaliteit naar {quality + 1}")
                         quality += 10
                         if (quality>100):
                             quality = 100
                         if (quality != lastQuality):
+                            print(f"📉 verhoog kwaliteit naar {quality}")
                             await websocket.send(json.dumps({"quality": quality}))
                         last_executed_q = current_time
                         lastQuality = quality
@@ -93,12 +93,13 @@ async def receive_messages():
                 # ✅ Automatisch kwaliteitsaanpassing sturen
                 if (fps_display < wantedFramerate - 2 and frameCounter > 200):
                     if current_time - last_executed_q >= 0.2:
-                        print(f"📉 FPS is te laag: {fps_display} → verlaag kwaliteit")
                         quality -= 10
                         if (quality<1):
                             quality = 1
                         if (quality != lastQuality):
                             await websocket.send(json.dumps({"quality": quality}))
+                            print(f"📉 verlaag kwaliteit naar {quality}")
+
                         last_executed_q = current_time
                         lastQuality = quality
 
