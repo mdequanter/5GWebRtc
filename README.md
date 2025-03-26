@@ -8,7 +8,7 @@ This section summarizes the performance evaluation of the 5GWebRtc pipeline. The
 
 A screen recording of the live stream test in 640×480 resolution:
 
-▶️ [`recording_640x480.avi`](./recording_640x480.avi)
+▶️ [`recording_640x480.avi`](./testbench/wifiLocal/recording_640x480.avi
 
 ---
 
