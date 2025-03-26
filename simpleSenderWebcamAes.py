@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
 import os
 
-SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"  # Vervang door je server IP
+SIGNALING_SERVER = "ws://94.111.36.87:9000"  # Vervang door je server IP
 
 if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
