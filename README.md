@@ -1,6 +1,6 @@
 # 📊 Testbench Results – 5GWebRtc
 
-This section summarizes the performance evaluation of the 5GWebRtc pipeline. The testbench analyzed the impact of JPEG compression and encryption on frame rate, compression time, and overall transmission performance.
+This section summarizes the performance evaluation of the  LocalWifi websocket streaming and 5GWebRtc pipeline. The code analyzed the impact of JPEG compression and encryption on frame rate, compression time, and overall transmission performance.
 
 ---
 
@@ -8,7 +8,8 @@ This section summarizes the performance evaluation of the 5GWebRtc pipeline. The
 
 A screen recording of the live stream test in 640×480 resolution:
 
-▶️ https://github.com/mdequanter/5GWebRtc/blob/main/testbench/wifiLocal/recording_640x480.avi
+▶️ (./testbench/wifiLocal/recording_640x480.avi)
+
 
 
 ---
@@ -17,7 +18,7 @@ A screen recording of the live stream test in 640×480 resolution:
 
 ### 1. Mean FPS over Compressed Size
 
-![FPS over Size](./stream_log_fps_mean_std_over_size_filtered.png)
+![FPS over Size](./testbench/wifiLocal/stream_log_fps_mean_std_over_size_filtered.png)
 
 - **FPS remains stable** (~22 FPS) for images ≤ 200 KB.
 - **Performance drops sharply** beyond 200 KB, hitting ~11 FPS at ~390 KB.
@@ -27,7 +28,7 @@ A screen recording of the live stream test in 640×480 resolution:
 
 ### 2. Average Compression Time (JPEG Quality)
 
-![Compression Time](./stream_log_compression_time_ms_combined.png)
+![Compression Time](./testbench/wifiLocal/stream_log_fps_mean_std_over_size_filtered.png)
 
 - **Resolutions tested**: `640x480` and `800x600`.
 - **Compression time increases** with higher JPEG quality.
