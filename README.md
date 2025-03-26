@@ -11,6 +11,10 @@ It's ideal for **network performance testing** across modern wireless technologi
 - **5G / 4G / 3G**
 - **2.5G & legacy mobile networks**
 ---
+This repository also includes additional tools and experiments, such as WebRTC-based real-time webcam streaming, synthetic noise image generation, and UDP/TCP load simulation scripts for advanced testing. The codebase has been tested on Ubuntu 22.04, Windows 11, and a Raspberry Pi with 5G modem (rpi5G), across both Python 3.8 and 3.10 environments. These utilities make the project suitable for broader experimentation in edge AI, robotics, and network optimization scenarios.
+
+**Future work:** Integrate support for packet loss simulation to evaluate robustness under unstable network conditions.
+
 
 ## 📦 Components
 
