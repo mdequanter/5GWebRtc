@@ -82,10 +82,10 @@ python imageTestBenchReceiver.py <ws://signalingserver:9000>
 ### 📂 Test Process
 
 1. A set of **test images** is streamed (e.g. city scenes, white noise).
-2. Each image is sent at two resolutions (`640x480`, `800x600`) and multiple **JPEG quality levels** (20% to 90%).
+2. Each image is sent at two resolutions (`640x480`, `800x600`) and multiple **JPEG quality levels** (20% to 90%). Each combination for several seconds.
 3. All frames are **AES-256 encrypted**, base64 encoded, and streamed over WebSocket.
 4. The **receiver decrypts** and displays the frames while logging real-time performance data (FPS, size, latency).
-5. A `stream_log.csv` file is generated.
+5. A `stream_log.csv` file is generated (thousands of lines)
 6. The `imageTestBenchGraph.py` script analyzes this file and **automatically generates all relevant graphs**.
 
 > You can add any custom image(s) and test in different network settings to the `test_images/` folder to extend or repeat the test with different visual content.
