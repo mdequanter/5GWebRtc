@@ -52,7 +52,9 @@ class CameraStreamTrack(VideoStreamTrack):
 
                 video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
                 video_frame.pts, video_frame.time_base = await self.next_timestamp()
-                video_frame.metadata["timestamp"] = datetime.now().isoformat()
+
+                # ✅ Timestamp meesturen via custom attribute (als workaround)
+                setattr(video_frame, "timestamp_iso", datetime.now().isoformat())
 
                 return video_frame
 
