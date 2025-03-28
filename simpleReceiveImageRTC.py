@@ -18,8 +18,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--signaling_server",
     type=str,
-    default="ws://heliwi.duckdns.org:9000",
-    help="WebSocket Signaling Server URL (default: ws://heliwi.duckdns.org:9000)"
+    default="ws://34.58.161.254:9000",
+    help="WebSocket Signaling Server URL (default: ws://34.58.161.254:9000)"
 )
 
 
