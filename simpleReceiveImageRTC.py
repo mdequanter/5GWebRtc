@@ -101,7 +101,6 @@ async def run():
     #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
 
     configuration = RTCConfiguration(iceServers=[
-        RTCIceServer(urls="stun:stun.l.google.com:19302"),
         RTCIceServer(
             urls=["turn:numb.viagenie.ca"],
             username="webrtc@live.com",
