@@ -1,17 +1,15 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from av import VideoFrame
 from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste WebSocket Signaling
 import time
-from aiortc.codecs import get_capabilities
-import numpy as np
 import argparse
+import numpy as np
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
-
 
 # Set up argument parser
 parser = argparse.ArgumentParser(
@@ -25,149 +23,131 @@ parser.add_argument(
     help="WebSocket Signaling Server URL (default: ws://34.58.161.254:9000)"
 )
 
-
 args = parser.parse_args()
-
 SIGNALING_SERVER = args.signaling_server
 
-# Open de camera
-# capture = cv2.VideoCapture(0)
-capture = cv2.VideoCapture(0)
+TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
 
-if not capture.isOpened():
-    raise RuntimeError("❌ Kan de camera niet openen!")
+class DummyVideoTrack(MediaStreamTrack):
+    """ Dummy video track om WebRTC offer te laten werken. """
 
-# Instellingen voor resolutie
-WIDTH, HEIGHT = 640, 480
-#capture.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-#capture.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
+    kind = "video"
 
-
-class CameraStreamTrack(VideoStreamTrack):
-    """ WebRTC VideoStream die frames van de camera haalt en verzendt. """
-
-
-    
     def __init__(self):
         super().__init__()
         self.start_time = time.time()
-        self.frame_count = 0  # ✅ Zorg ervoor dat frame_count correct is gedefinieerd
-        logging.info("✅ Video track is toegevoegd aan peer connection!")
-
-
-    def apply_shuffle(frame):
-        """ Past een vooraf bepaalde shuffle-index toe. """
-        height, width, _ = frame.shape
-        flat_frame = frame.reshape(-1, 3)
-        shuffled = flat_frame[SHUFFLE_INDEX % len(flat_frame)]
-        return shuffled.reshape(height, width, 3)
-
-
-    def processFrame(self, frame):
-        # Get timestamp
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-        # Overlay metadata on the original frame (before encryption)
-        cv2.putText(frame, f"Time: {timestamp}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(frame, f"Resolution: {WIDTH}x{WIDTH}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-        return frame
-
-
-    async def next_timestamp(self):
-        """ Genereert een correcte timestamp voor het frame. """
-        self.frame_count += 1
-        timestamp = int((time.time() - self.start_time) * 90000)
-        return timestamp, 90000  # 90 kHz tijdsbase        
+        self.frame_count = 0
 
     async def recv(self):
-        while True:
-            try:
-                ret, frame = capture.read()
-                if not ret:
-                    logging.warning("⚠️ Kan geen frame ophalen! Probeer opnieuw...")
-                    await asyncio.sleep(0.1)  # Wacht even en probeer opnieuw
-                    continue
+        frame = VideoFrame(width=640, height=480, format="rgb24")
+        frame.pts, frame.time_base = self.next_timestamp()
+        return frame
 
-                frame = cv2.resize(frame, (WIDTH, HEIGHT))
+    def next_timestamp(self):
+        self.frame_count += 1
+        timestamp = int((time.time() - self.start_time) * 90000)
+        return timestamp, 90000  # 90 kHz tijdsbase
 
-                frame = self.processFrame(frame)
+class VideoReceiver:
+    def __init__(self):
+        self.fps_display = 0
+        self.message_count = 0
+        self.last_time = asyncio.get_event_loop().time()
 
+    def process_frame(self, frame: VideoFrame):
+        image = frame.to_ndarray(format="rgb24")
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
 
+        self.message_count += 1
+        current_time = asyncio.get_event_loop().time()
+        elapsed_time = current_time - self.last_time
 
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if elapsed_time >= 1.0:
+            self.fps_display = self.message_count
+            self.message_count = 0
+            self.last_time = current_time
 
-                video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-                video_frame.pts, video_frame.time_base = await self.next_timestamp()
+        cv2.putText(image, f"FPS: {self.fps_display}", (10, 470),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2, cv2.LINE_AA)
 
-                #logging.info("📡 Frame verzonden naar client")
-                return video_frame
+        cv2.imshow("WebRTC Video Stream", image)
+        cv2.waitKey(1)
 
-            except Exception as e:
-                logging.error(f"❌ Fout in `recv()`: {e}")
-                await asyncio.sleep(0.1)  # Wacht even en probeer opnieuw
+async def wait_for_ice(pc):
+    for _ in range(10):
+        if pc.iceConnectionState in ["connected", "completed"]:
+            logging.info("✅ ICE-verbinding tot stand gebracht!")
+            return True
+        await asyncio.sleep(1)
+    logging.error("❌ ICE-verbinding is mislukt!")
+    return False
+
 async def run():
-    """ Verbindt met de WebRTC signaling server en verstuurt video. """
-    
-    #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
-    
     configuration = RTCConfiguration(iceServers=[
-        RTCIceServer(urls="stun:34.58.161.254:3478"),  # ← jouw VM IP
+        RTCIceServer(urls="stun:34.58.161.254:3478"),
         RTCIceServer(
             urls=["turn:34.58.161.254:3478?transport=udp"],
             username="unused",
             credential="J0eS3cret123"
         )
     ])
-    
-    signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
+
+    signaling = WebSocketSignaling(SIGNALING_SERVER)
     pc = RTCPeerConnection(configuration)
+    receiver = VideoReceiver()
+    dummy_video_track = DummyVideoTrack()
+    pc.addTrack(dummy_video_track)
 
-    # ✅ Voeg de camera toe als een video-track
-    #pc.addTransceiver("video", direction="sendonly")
-    
+    @pc.on("connectionstatechange")
+    async def on_connection_state_change():
+        logging.info(f"🔗 WebRTC status veranderd")
 
-    transceiver = pc.addTransceiver("video", direction="sendonly")
-
-    video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
-    transceiver.setCodecPreferences(video_codecs)
-
-    video_track = CameraStreamTrack()
-
-    pc.addTrack(video_track)
+    @pc.on("track")
+    def on_track(track):
+        logging.info(f"📡 Ontvangen video track: {track.kind}")
+        if track.kind == "video":
+            async def receive_video():
+                while True:
+                    try:
+                        frame = await track.recv()
+                        receiver.process_frame(frame)
+                    except Exception as e:
+                        logging.warning(f"⚠️ Fout bij video-ontvangst: {e}", exc_info=True)
+                        await asyncio.sleep(0.1)
+            asyncio.create_task(receive_video())
 
     try:
         await signaling.connect()
-        logging.info("✅ Verbonden met WebRTC Signaling Server... Wachten op een client...")
+        logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
+
+        offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
+
+        obj = await signaling.receive()
+        if isinstance(obj, dict) and "sdp" in obj:
+            await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+
+        if not await wait_for_ice(pc):
+            raise Exception("ICE-verbinding mislukt!")
+
+        logging.info("✅ WebRTC-verbinding is succesvol tot stand gekomen!")
 
         while True:
-            obj = await signaling.receive()
-            if isinstance(obj, dict) and "sdp" in obj:
-                logging.info("📡 WebRTC Client Verbonden! Start Streaming...")
-
-                # Zet de Remote Description en stuur een antwoord (SDP)
-                await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
-                answer = await pc.createAnswer()
-                await pc.setLocalDescription(answer)
-                await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
-
-            elif obj is None:
-                break
-
+            await asyncio.sleep(1)
     except Exception as e:
         logging.error(f"❌ Fout opgetreden: {e}")
-
     finally:
         logging.info("🛑 WebRTC verbinding sluiten...")
         await pc.close()
         await signaling.close()
-        capture.release()
-        logging.info("✅ Camera vrijgegeven en WebRTC gestopt.")
-
+        cv2.destroyAllWindows()
+        logging.info("✅ WebRTC gestopt en venster gesloten.")
 
 if __name__ == "__main__":
     try:
         asyncio.run(run())
     except KeyboardInterrupt:
         logging.info("🛑 Handmatige onderbreking. Programma wordt afgesloten.")
-        capture.release()
+        cv2.destroyAllWindows()
