@@ -24,7 +24,7 @@ SIGNALING_SERVER = args.signaling_server
 WIDTH, HEIGHT = 640, 480
 
 # Open webcam (voeg CAP_DSHOW toe indien nodig op Windows)
-capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+capture = cv2.VideoCapture(0)
 if not capture.isOpened():
     raise RuntimeError("❌ Kan de camera niet openen!")
 
