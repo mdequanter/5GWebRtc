@@ -23,7 +23,7 @@ parser.add_argument(
     type=str,
     default="ws://heliwi.duckdns.org:9000",
     help="WebSocket Signaling Server URL (default: ws://heliwi.duckdns.org:9000)"
-
+)
 
 
 args = parser.parse_args()
