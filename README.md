@@ -211,14 +211,11 @@ One of the test scenarios used in this project involved streaming from a **Raspb
 
 ### ✅ Key Insights
 
-- 💡 Demonstrates that **edge streaming over 5G** from resource-constrained hardware is viable.
+- 💡 Demonstrates that **edge video streaming over 5G** from resource-constrained hardware is viable, but not perfect for realtime robotics operations (latency > 100ms).
 - 🔐 End-to-end encryption and metadata tracking worked seamlessly.
 - ⚖️ Trade-off observed between image quality and FPS, especially beyond 100 KB.
 
 This real-world test highlights how this testbench can be used to simulate and analyze **5G edge deployment scenarios** using Raspberry Pi-class devices.
 
-
-
 📂 All results were generated using the included graph and logging scripts in this repository.
 
-Feel free to open an issue or discussion for questions about the benchmarking methodology.
