@@ -112,13 +112,13 @@ async def run():
     #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
     
     configuration = RTCConfiguration(iceServers=[
+        RTCIceServer(urls="stun:stun.l.google.com:19302"),
         RTCIceServer(
-            urls=["turn:numb.viagenie.ca"],
-            username="webrtc@live.com",
-            credential="muazkh"
+            urls=["turn:openrelay.metered.ca:80"],
+            username="openrelayproject",
+            credential="openrelayproject"
         )
     ])    
-    
     
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     pc = RTCPeerConnection(configuration)
