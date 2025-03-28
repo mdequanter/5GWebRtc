@@ -7,13 +7,28 @@ from websocket_signaling import WebSocketSignaling  # ✅ Gebruik aangepaste Web
 import time
 from aiortc.codecs import get_capabilities
 import numpy as np
+import argparse
 
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
 
-#SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
-SIGNALING_SERVER = "ws://192.168.1.29:9000"  # ✅ Jouw bestaande signaling server
 
+# Set up argument parser
+parser = argparse.ArgumentParser(
+    description="Receive images via WebSocket and record network parameters."
+)
+
+parser.add_argument(
+    "--signaling_server",
+    type=str,
+    default="ws://0.tcp.eu.ngrok.io:16137",
+    help="WebSocket Signaling Server URL (default: ws://heliwi.duckdns.org:9000)"
+)
+
+
+args = parser.parse_args()
+
+SIGNALING_SERVER = args.signaling_server
 
 # Open de camera
 # capture = cv2.VideoCapture(0)
