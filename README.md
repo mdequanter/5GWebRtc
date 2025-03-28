@@ -5,6 +5,8 @@ This repository provides a **lightweight and flexible testbench** for evaluating
 - 📦 **JPEG compression**
 - 🔐 **AES-256 encryption (CBC mode)**
 - 🌐 **WebSocket-based communication**
+- 🌐 **Sender and receiver are timesynced to measure latency**
+(Kang, S., Lee, J., Kim, M., Ryu, S., & Kim, S. (2008). A Synchronization Method for Timing the Network Using Single-TimeSync Frame. Int. J. Principles Appl. Inf. Sci. Technol, 2(1), 64-75.)
 
 It's ideal for **network performance testing** across modern wireless technologies such as:
 - **Wi-Fi 6 / Wi-Fi 5**
@@ -205,8 +207,7 @@ One of the test scenarios used in this project involved streaming from a **Raspb
 - 📉 FPS gradually dropped as image size increased, reaching ~15 FPS at ~160 KB.
 - 🎯 Sweet spot: **35–80 KB per image** for smooth real-time streaming over 5G from an embedded device.
 - 📉 Latency is high because the receiver and sender ar not on the same network. Signaling server or running locally but only accessible via internet address from both devices.  This adds a lot of delay
-
-- 
+ 
 
 ### ✅ Key Insights
 
