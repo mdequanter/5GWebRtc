@@ -19,7 +19,7 @@ SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"
 if len(sys.argv) > 1:
     SIGNALING_SERVER = sys.argv[1]
 
-wantedFramerate = 15
+wantedFramerate = 25
 maxQuality = 60
 
 

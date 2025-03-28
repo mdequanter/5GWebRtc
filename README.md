@@ -52,11 +52,27 @@ A minimal WebSocket relay:
 
 ### 📈 `imageTestBenchGraph.py` – **Graph Generator**
 Generates performance graphs from `stream_log.csv`:
-- FPS vs JPEG Quality / Size
-- Compression & Encryption time vs JPEG Quality
-- Per-resolution & per-filename breakdown
-- FPS vs Compressed Size (with ±1 std deviation)
-- Outputs graphs as `.png` and a summary CSV
+
+Generated Graphs:
+FPS vs JPEG Quality / Size
+Shows how framerate varies with image compression level and size.
+
+Compression & Encryption Time vs JPEG Quality
+Visualizes how processing times are affected by image quality settings.
+
+Bitrate (Mbit/s) vs JPEG Quality, FPS, and Frame Size
+Understand how network usage changes with quality and performance.
+
+Latency (ms) vs Frame Size
+Displays transmission delay relative to frame size.
+
+Per-resolution & Per-filename breakdowns
+Separate plots for each unique image file and resolution in the dataset.
+
+All 'mean ± std deviation' plots
+Graphs include visual bands showing standard deviation to indicate variability.
+
+
 
 📊 Results are used for performance evaluation and tuning.
 

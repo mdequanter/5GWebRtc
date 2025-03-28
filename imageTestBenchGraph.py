@@ -1,7 +1,16 @@
+
 import pandas as pd
 import matplotlib.pyplot as plt
+import argparse
+import os
 
-csv_filename = "stream_log.csv"
+parser = argparse.ArgumentParser(description="Generate graphs from stream_log.csv in specified directory")
+parser.add_argument("--map", type=str, required=True, help="Map of stream_log.csv")
+
+args = parser.parse_args()
+csv_folder = args.map
+csv_filename = os.path.join(csv_folder, "stream_log.csv")
+
 
 def generate_combined_graphs(csv_path):
     df = pd.read_csv(csv_path)
@@ -9,6 +18,8 @@ def generate_combined_graphs(csv_path):
     if "resolution" not in df.columns or "jpeg_quality" not in df.columns:
         print("⚠️ CSV does not contain required columns.")
         return
+
+    setup_description = df["setup description"].iloc[0] if "setup description" in df.columns else "Unknown Setup"
 
     metrics = ["size_kb", "compression_time_ms", "encryption_time_ms", "fps"]
     metric_titles = {
@@ -20,46 +31,6 @@ def generate_combined_graphs(csv_path):
 
     jpeg_qualities = sorted(df["jpeg_quality"].unique())
     resolutions = sorted(df["resolution"].unique())
-
-    # 1. Combined graphs by resolution
-    for metric in metrics:
-        plt.figure(figsize=(10, 6))
-        for res in resolutions:
-            df_res = df[df["resolution"] == res]
-            grouped = df_res.groupby("jpeg_quality")[metric].mean()
-            grouped = grouped.reindex(jpeg_qualities)
-            plt.plot(jpeg_qualities, grouped, marker='o', label=res)
-
-        plt.title(f"{metric_titles[metric]} by JPEG Quality")
-        plt.xlabel("JPEG Quality (%)")
-        plt.ylabel(metric_titles[metric])
-        plt.grid(True)
-        plt.legend(title="Resolution")
-        plt.xticks(jpeg_qualities)
-        plt.tight_layout()
-
-        output_file = csv_path.replace(".csv", f"_{metric}_combined.png")
-        plt.savefig(output_file)
-        plt.close()
-        print(f"📈 Saved combined chart: {output_file}")
-
-    # 2. FPS vs Resolution grouped by JPEG Quality
-    plt.figure(figsize=(10, 6))
-    for quality in jpeg_qualities:
-        df_qual = df[df["jpeg_quality"] == quality]
-        grouped = df_qual.groupby("resolution")["fps"].mean()
-        plt.plot(grouped.index, grouped.values, marker='o', label=f"{quality}%")
-
-    plt.title("FPS by Resolution (Grouped by JPEG Quality)")
-    plt.xlabel("Resolution")
-    plt.ylabel("FPS")
-    plt.grid(True)
-    plt.legend(title="JPEG Quality")
-    plt.tight_layout()
-    output_file = csv_path.replace(".csv", "_fps_by_resolution.png")
-    plt.savefig(output_file)
-    plt.close()
-    print(f"📈 Saved FPS vs. Resolution chart: {output_file}")
 
     # 3. Summary by filename
     summary = df.groupby("filename").agg({
@@ -82,7 +53,7 @@ def generate_combined_graphs(csv_path):
             grouped = grouped.reindex(jpeg_qualities)
             plt.plot(jpeg_qualities, grouped, marker='o', label=filename)
 
-        plt.title(f"{metric_titles[metric]} by JPEG Quality per Filename")
+        plt.title(f"{metric_titles[metric]} by JPEG Quality per Filename\n{setup_description}")
         plt.xlabel("JPEG Quality (%)")
         plt.ylabel(metric_titles[metric])
         plt.grid(True)
@@ -95,31 +66,100 @@ def generate_combined_graphs(csv_path):
         plt.close()
         print(f"📁 Saved filename breakdown chart: {output_file}")
 
-    # 5. FPS vs. Size (mean + std, grouped by rounded size_kb, starting from 35 KB)
+    # FPS vs. Size
     df_filtered = df[df["size_kb"] >= 35].copy()
-    df_filtered["size_kb_rounded"] = df_filtered["size_kb"].round(0)  # Round to nearest KB
-
+    df_filtered["size_kb_rounded"] = df_filtered["size_kb"].round(0)
     grouped = df_filtered.groupby("size_kb_rounded")["fps"].agg(["mean", "std"]).reset_index()
-
     plt.figure(figsize=(10, 6))
     plt.plot(grouped["size_kb_rounded"], grouped["mean"], label="Mean FPS", marker='o', linestyle='-')
     plt.fill_between(grouped["size_kb_rounded"],
                      grouped["mean"] - grouped["std"],
                      grouped["mean"] + grouped["std"],
                      color='blue', alpha=0.2, label="±1 Std Dev")
-
-    plt.title("Mean FPS over Compressed Size (Rounded KB, ≥ 35 KB)")
+    plt.title(f"Mean FPS over Compressed Size (Rounded KB, ≥ 35 KB)\n{setup_description}")
     plt.xlabel("Compressed Size (KB, rounded)")
     plt.ylabel("FPS")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-
     output_file = csv_path.replace(".csv", "_fps_mean_std_over_size_filtered.png")
     plt.savefig(output_file)
     plt.close()
     print(f"📈 Saved filtered FPS vs. Size chart: {output_file}")
 
 
+    # Latency vs. Size
+    df_filtered = df[df["size_kb"] >= 35].copy()
+    df_filtered["size_kb_rounded"] = df_filtered["size_kb"].round(0)
+
+    grouped = df_filtered.groupby("size_kb_rounded")["latency_ms"].agg(["mean", "std"]).reset_index()
+
+    x = grouped["size_kb_rounded"].to_numpy(dtype=float)
+    y_mean = grouped["mean"].to_numpy(dtype=float)
+    y_std = grouped["std"].to_numpy(dtype=float)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_mean, label="Mean Latency (ms)", marker='o', linestyle='-')
+    plt.fill_between(x, y_mean - y_std, y_mean + y_std,
+                     color='red', alpha=0.2, label="±1 Std Dev")
+
+    plt.title(f"Mean Latency over Compressed Size (Rounded KB ≥ 35)\n{setup_description}")
+    plt.xlabel("Compressed Size (KB, rounded)")
+    plt.ylabel("Latency (ms)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+
+    output_file = csv_path.replace(".csv", "_latency_mean_std_over_size_filtered.png")
+    plt.savefig(output_file)
+    plt.close()
+    print(f"📈 Saved filtered Latency vs. Size chart: {output_file}")
+
+
+
+
+    # Mbits vs FPS
+    df_filtered = df[df["fps"] >= 10].copy()
+    df_filtered["fps_rounded"] = df_filtered["fps"].round(0)
+    grouped = df_filtered.groupby("fps_rounded")["Mbits"].agg(["mean", "std"]).reset_index()
+    x = grouped["fps_rounded"].to_numpy(dtype=float)
+    y_mean = grouped["mean"].to_numpy(dtype=float)
+    y_std = grouped["std"].to_numpy(dtype=float)
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_mean, label="Mean Bitrate (Mbit/s)", marker='o', linestyle='-')
+    plt.fill_between(x, y_mean - y_std, y_mean + y_std,
+                     color='orange', alpha=0.2, label="±1 Std Dev")
+    plt.title(f"Bitrate vs FPS (Rounded FPS ≥ 10)\n{setup_description}")
+    plt.xlabel("Frames Per Second (FPS)")
+    plt.ylabel("Bitrate (Mbit/s)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    output_file = csv_path.replace(".csv", "_mbits_mean_std_over_fps_filtered.png")
+    plt.savefig(output_file)
+    plt.close()
+    print(f"📈 Saved Bitrate vs FPS chart: {output_file}")
+
+    # Mbits vs Size
+    df_filtered = df[df["size_kb"] >= 10].copy()
+    df_filtered["size_kb_rounded"] = df_filtered["size_kb"].round(0)
+    grouped = df_filtered.groupby("size_kb_rounded")["Mbits"].agg(["mean", "std"]).reset_index()
+    x = grouped["size_kb_rounded"].to_numpy(dtype=float)
+    y_mean = grouped["mean"].to_numpy(dtype=float)
+    y_std = grouped["std"].to_numpy(dtype=float)
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_mean, label="Mean Bitrate (Mbit/s)", marker='o', linestyle='-')
+    plt.fill_between(x, y_mean - y_std, y_mean + y_std,
+                     color='purple', alpha=0.2, label="±1 Std Dev")
+    plt.title(f"Bitrate vs Compressed Frame Size (Rounded KB ≥ 10)\n{setup_description}")
+    plt.xlabel("Compressed Size (KB)")
+    plt.ylabel("Bitrate (Mbit/s)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    output_file = csv_path.replace(".csv", "_mbits_mean_std_over_size_filtered.png")
+    plt.savefig(output_file)
+    plt.close()
+    print(f"📈 Saved Bitrate vs Size chart: {output_file}")
 
 generate_combined_graphs(csv_filename)

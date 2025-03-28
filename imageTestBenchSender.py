@@ -11,25 +11,45 @@ from PIL import Image
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
+import argparse
+from datetime import datetime
 
-time.sleep(5)   # Wacht 5 seconden om de server te starten
+# Set up argument parser
+parser = argparse.ArgumentParser(
+    description="Send images via WebSocket and record network parameters."
+)
 
+parser.add_argument(
+    "--signaling_server",
+    type=str,
+    default="ws://heliwi.duckdns.org:9000",
+    help="WebSocket Signaling Server URL (default: ws://heliwi.duckdns.org:9000)"
+)
 
-# WebSocket server
-SIGNALING_SERVER = "ws://heliwi.duckdns.org:9000"
-if len(sys.argv) > 1:
-    SIGNALING_SERVER = sys.argv[1]
+parser.add_argument(
+    "--description",
+    type=str,
+    default="Local Wifi 5G",
+    help="Description of the test setup (default: 'Local Wifi 5G')"
+)
 
-print(f"Signaling Server: {SIGNALING_SERVER}")
+args = parser.parse_args()
 
-# AES-256 sleutel (32 bytes)
+SIGNALING_SERVER = args.signaling_server
+setupDescription = f"{args.description} - {SIGNALING_SERVER}"
+
+print(f"Started: {setupDescription}")
+
+# AES-256 key (32 bytes)
+# Don't forget to change this key for real situations!!!
 AES_KEY = b'C\x03\xb6\xd2\xc5\t.Brp\x1ce\x0e\xa4\xf6\x8b\xd2\xf6\xb0\x8a\x9c\xd5D\x1e\xf4\xeb\x1d\xe6\x0c\x1d\xff '
 
-# Instellingen
+# Settings
 IMAGE_FOLDER = "test_images"
 JPEG_QUALITIES = [20,25,30,35,40,45,50,55,60,65,70,75,80,85,90]
+# JPEG_QUALITIES = [20]
 SECONDS_PER_QUALITY = 5
-FPS = 30
+FPS = 40
 FRAMES_PER_QUALITY = SECONDS_PER_QUALITY * FPS
 FRAME_INTERVAL = 1 / FPS
 
@@ -50,7 +70,21 @@ def encrypt_data(plain_bytes):
 
 async def send_images():
     async with websockets.connect(SIGNALING_SERVER, max_size=None) as websocket:
-        print(f"✅ Verbonden met Signaling Server: {SIGNALING_SERVER}")
+        print(f"✅ Connected to Signaling Server: {SIGNALING_SERVER}")
+
+        message = await websocket.recv()
+        data = json.loads(message)
+
+        if data["type"] == "SingleTimeSync":
+            request_tx_time = data["requestTxTime"]
+            response_tx_time = datetime.now().isoformat()
+
+            await websocket.send(json.dumps({
+                "type": "SingleTimeSyncResponse",
+                "requestTxTime": request_tx_time,
+                "responseTxTime": response_tx_time
+            }))
+
 
         image_files = sorted([
             f for f in os.listdir(IMAGE_FOLDER)
@@ -58,15 +92,17 @@ async def send_images():
         ])
 
         if not image_files:
-            print("❌ Geen afbeeldingen gevonden in test_images/")
+            print("❌ No images found in test_images/")
             return
+
+        frame_id = 0
 
         for image_file in image_files:
             image_path = os.path.join(IMAGE_FOLDER, image_file)
             frame = cv2.imread(image_path)
 
             if frame is None:
-                print(f"⚠️ Fout bij inlezen: {image_file}")
+                print(f"⚠️ Error reading: {image_file}")
                 continue
 
             height, width = frame.shape[:2]
@@ -76,11 +112,13 @@ async def send_images():
             print(f"🚀 Start streaming: {image_file} ({width}x{height})")
 
             for quality in JPEG_QUALITIES:
-                print(f"🎯 JPEG kwaliteit: {quality}% ({SECONDS_PER_QUALITY} sec @ {FPS} FPS)")
+                print(f"🎯 JPEG quality: {quality}% ({SECONDS_PER_QUALITY} sec @ {FPS} FPS)")
                 for _ in range(FRAMES_PER_QUALITY):
-                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-                    # Compressie
+                    frame_id += 1
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                    #if frame_id % 500 == 0:
+                    #    print (f"frame {frame_id} : {timestamp}")
+                    # Compression
                     compressed_io = io.BytesIO()
                     compress_start = time.time()
                     pil_image.save(compressed_io, format="JPEG", quality=quality)
@@ -88,11 +126,13 @@ async def send_images():
                     compressed_bytes = compressed_io.getvalue()
                     size_kb = len(compressed_bytes) / 1024
 
-                    # Encryptie
+                    # Encryption
                     encrypted_data, encryption_time = encrypt_data(compressed_bytes)
 
-                    # Verzendbericht
+                    # Message to send
                     message = {
+                        "setup_description": setupDescription,
+                        "frame_id": frame_id,
                         "type": "test",
                         "filename": image_file,
                         "timestamp": timestamp,
@@ -107,10 +147,10 @@ async def send_images():
                     await websocket.send(json.dumps(message))
                     await asyncio.sleep(FRAME_INTERVAL)
 
-        print("✅ Alle afbeeldingen en kwaliteitsniveaus verzonden.")
+        print(f"✅ All images and quality levels sent. Total frames: {frame_id}")
 
-# Start de async loop
+# Start the async loop
 try:
     asyncio.run(send_images())
 except KeyboardInterrupt:
-    print("⏹️ Gestopt door gebruiker.")
+    print("⏹️ Stopped by user.")
