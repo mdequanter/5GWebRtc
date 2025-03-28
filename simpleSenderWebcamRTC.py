@@ -123,7 +123,7 @@ async def run():
     def on_icecandidate(event):
         if event.candidate:
             print("Sender ICE-candidate:", event.candidate)
-        transceiver = pc.addTransceiver("video", direction="sendonly")
+    transceiver = pc.addTransceiver("video", direction="sendonly")
 
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
