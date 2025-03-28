@@ -21,9 +21,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--signaling_server",
     type=str,
-    default="ws://0.tcp.eu.ngrok.io:16137",
+    default="ws://heliwi.duckdns.org:9000",
     help="WebSocket Signaling Server URL (default: ws://heliwi.duckdns.org:9000)"
-)
+
 
 
 args = parser.parse_args()
