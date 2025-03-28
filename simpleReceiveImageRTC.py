@@ -100,14 +100,15 @@ async def run():
     
     #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
 
-    confoguration = RTCConfiguration(iceServers=[
-        RTCIceServer(urls="stun:stun.l.google.com:19302"),
+    configuration = RTCConfiguration(iceServers=[
+        RTCIceServer(urls="stun:34.58.161.254:3478"),  # ← jouw VM IP
         RTCIceServer(
-            urls=["turn:openrelay.metered.ca:80"],
-            username="openrelayproject",
-            credential="openrelayproject"
+            urls=["turn:34.58.161.254:3478?transport=udp"],
+            username="unused",
+            credential="J0eS3cret123"
         )
     ])
+
 
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection(configuration)
