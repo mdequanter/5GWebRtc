@@ -29,8 +29,6 @@ SIGNALING_SERVER = args.signaling_server
 TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
 
 class DummyVideoTrack(MediaStreamTrack):
-    """ Dummy video track om WebRTC offer te laten werken. """
-
     kind = "video"
 
     def __init__(self):
@@ -46,7 +44,7 @@ class DummyVideoTrack(MediaStreamTrack):
     def next_timestamp(self):
         self.frame_count += 1
         timestamp = int((time.time() - self.start_time) * 90000)
-        return timestamp, 90000  # 90 kHz tijdsbase
+        return timestamp, 90000
 
 class VideoReceiver:
     def __init__(self):
@@ -96,8 +94,6 @@ async def run():
     signaling = WebSocketSignaling(SIGNALING_SERVER)
     pc = RTCPeerConnection(configuration)
     receiver = VideoReceiver()
-    dummy_video_track = DummyVideoTrack()
-    pc.addTrack(dummy_video_track)
 
     @pc.on("connectionstatechange")
     async def on_connection_state_change():
@@ -127,7 +123,10 @@ async def run():
 
         obj = await signaling.receive()
         if isinstance(obj, dict) and "sdp" in obj:
-            await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+            if pc.signalingState == "have-local-offer":
+                await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+            else:
+                logging.warning("⚠️ Signaling state is niet 'have-local-offer', skipping setRemoteDescription")
 
         if not await wait_for_ice(pc):
             raise Exception("ICE-verbinding mislukt!")
