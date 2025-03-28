@@ -95,6 +95,9 @@ async def run():
     pc = RTCPeerConnection(configuration)
     receiver = VideoReceiver()
 
+    dummy_video_track = DummyVideoTrack()
+    pc.addTrack(dummy_video_track)
+
     @pc.on("connectionstatechange")
     async def on_connection_state_change():
         logging.info(f"🔗 WebRTC status veranderd")
@@ -117,16 +120,12 @@ async def run():
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
 
-        offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
-
         obj = await signaling.receive()
         if isinstance(obj, dict) and "sdp" in obj:
-            if pc.signalingState == "have-local-offer":
-                await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
-            else:
-                logging.warning("⚠️ Signaling state is niet 'have-local-offer', skipping setRemoteDescription")
+            await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+            await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
         if not await wait_for_ice(pc):
             raise Exception("ICE-verbinding mislukt!")
