@@ -11,8 +11,8 @@ import numpy as np
 # Logging instellen
 logging.basicConfig(level=logging.INFO)
 
-SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
-#SIGNALING_SERVER = "ws://192.168.1.29:9000"  # ✅ Jouw bestaande signaling server
+#SIGNALING_SERVER = "ws://94.111.36.87:9000"  # ✅ Jouw bestaande signaling server
+SIGNALING_SERVER = "ws://192.168.1.29:9000"  # ✅ Jouw bestaande signaling server
 
 
 # Open de camera
