@@ -43,6 +43,9 @@ WIDTH, HEIGHT = 640, 480
 #capture.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
 
 
+
+
+
 class CameraStreamTrack(VideoStreamTrack):
     """ WebRTC VideoStream die frames van de camera haalt en verzendt. """
 
@@ -116,8 +119,11 @@ async def run():
     # ✅ Voeg de camera toe als een video-track
     #pc.addTransceiver("video", direction="sendonly")
     
-
-    transceiver = pc.addTransceiver("video", direction="sendonly")
+    @pc.on("icecandidate")
+    def on_icecandidate(event):
+        if event.candidate:
+            print("Sender ICE-candidate:", event.candidate)
+        transceiver = pc.addTransceiver("video", direction="sendonly")
 
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
