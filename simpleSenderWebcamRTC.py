@@ -109,7 +109,18 @@ class CameraStreamTrack(VideoStreamTrack):
 async def run():
     """ Verbindt met de WebRTC signaling server en verstuurt video. """
     
-    configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+    #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+    
+    configuration = RTCConfiguration(iceServers=[
+        RTCIceServer(urls="stun:stun.l.google.com:19302"),
+        RTCIceServer(
+            urls=["turn:numb.viagenie.ca"],
+            username="webrtc@live.com",
+            credential="muazkh"
+        )
+    ])    
+    
+    
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Verbind met WebSocket Signaling Server
     pc = RTCPeerConnection(configuration)
 

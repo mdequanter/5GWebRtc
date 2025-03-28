@@ -98,7 +98,18 @@ async def wait_for_ice(pc):
 async def run():
     """ Verbindt met de WebRTC-server en toont video. """
     
-    configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+    #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
+
+    configuration = RTCConfiguration(iceServers=[
+        RTCIceServer(urls="stun:stun.l.google.com:19302"),
+        RTCIceServer(
+            urls=["turn:numb.viagenie.ca"],
+            username="webrtc@live.com",
+            credential="muazkh"
+        )
+    ])
+
+
     signaling = WebSocketSignaling(SIGNALING_SERVER)  # ✅ Gebruik bestaande signaling server
     pc = RTCPeerConnection(configuration)
     receiver = VideoReceiver()
