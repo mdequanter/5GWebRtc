@@ -185,9 +185,12 @@ Includes per-frame metrics:
 
 ## 📶 Real-Time Streaming Over 5G (Raspberry Pi)
 
-One of the test scenarios used in this project involved streaming from a **Raspberry Pi 4** connected via **5G**, while the **signaling server** was running locally on the same machine or network as the Wi-Fi tests.
+One of the test scenarios used in this project involved streaming from a **Raspberry Pi 4** connected via **5G**, while the **signaling server** was running locally on my own network on the same machine or network as the Wi-Fi tests.
 
-![FPS over Size](./testbench/rpi5G/stream_log_fps_mean_std_over_size_filtered.png)
+![image](https://github.com/user-attachments/assets/a43fcd9e-3241-47d8-8c4c-9f400731c6fe)
+
+![image](https://github.com/user-attachments/assets/b96edc92-4092-45f6-8915-3152bd43257f)
+
 
 ### 🔍 Setup Details
 
@@ -201,6 +204,9 @@ One of the test scenarios used in this project involved streaming from a **Raspb
 - 📦 For compressed sizes **≤ 80 KB**, it maintained ~20 FPS.
 - 📉 FPS gradually dropped as image size increased, reaching ~15 FPS at ~160 KB.
 - 🎯 Sweet spot: **35–80 KB per image** for smooth real-time streaming over 5G from an embedded device.
+- 📉 Latency is high because the receiver and sender ar not on the same network. Signaling server or running locally but only accessible via internet address from both devices.  This adds a lot of delay
+
+- 
 
 ### ✅ Key Insights
 
