@@ -143,13 +143,15 @@ async def run():
 
     @pc.on("datachannel")
     def on_datachannel(channel):
-        logging.info(f"📨 DataChannel geopend: {channel.label}")
+        logging.info(f"📨 DataChannel ontvangen: {channel.label}")
+
+        @channel.on("open")
+        def on_open():
+            logging.info("✅ DataChannel is open op receiver")
 
         @channel.on("message")
         def on_message(message):
-            print(f"📨 Metadata ontvangen: {message}")            
             receiver.handle_metadata(message)
-
     try:
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
