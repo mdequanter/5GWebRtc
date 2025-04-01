@@ -62,6 +62,7 @@ class VideoReceiver:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
 
+
         self.message_count += 1
         current_time = asyncio.get_event_loop().time()
         elapsed_time = current_time - self.last_time
@@ -72,6 +73,10 @@ class VideoReceiver:
             self.last_time = current_time
 
         metadata = self.latest_metadata
+
+        print(f"📋 Metadata in frame: {metadata}")
+
+
         overlay_lines = [
             f"FPS: {self.fps_display}",
             f"Frame ID: {metadata.get('frame_id', '-')}",
@@ -142,6 +147,7 @@ async def run():
 
         @channel.on("message")
         def on_message(message):
+            print(f"📨 Metadata ontvangen: {message}")            
             receiver.handle_metadata(message)
 
     try:

@@ -92,6 +92,9 @@ class ImageFolderStreamTrack(VideoStreamTrack):
                 "size_kb": "n/a"
             }
             self.data_channel.send(json.dumps(metadata))
+            logging.info(f"📤 Metadata verzonden: {metadata}")
+        else:
+            logging.warning("Datachannel not open")
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
