@@ -100,7 +100,7 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-        if self.frame_count % 30 == 0:
+        if self.frame_count % 1000 == 0:
             logging.info(f"📡 Verzonden frame #{self.frame_count}")
         await asyncio.sleep(FRAME_INTERVAL)
         return video_frame
