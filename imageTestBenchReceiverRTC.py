@@ -1,14 +1,13 @@
 import asyncio
 import cv2
 import logging
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from av import VideoFrame
-from websocket_signaling import WebSocketSignaling
 import time
 import argparse
 import json
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from av import VideoFrame
+from websocket_signaling import WebSocketSignaling
 
-# Logging instellen
 logging.basicConfig(level=logging.INFO)
 
 parser = argparse.ArgumentParser(description="Receive images via WebRTC and display metadata.")
@@ -21,7 +20,7 @@ parser.add_argument(
 args = parser.parse_args()
 SIGNALING_SERVER = args.signaling_server
 
-TARGET_WIDTH, TARGET_HEIGHT = 640, 480  # Consistente weergavegrootte
+TARGET_WIDTH, TARGET_HEIGHT = 640, 480
 
 class DummyVideoTrack(MediaStreamTrack):
     kind = "video"
@@ -32,7 +31,6 @@ class DummyVideoTrack(MediaStreamTrack):
         self.frame_count = 0
 
     async def recv(self):
-        # Lege zwarte frame (wordt niet echt gebruikt)
         frame = VideoFrame(width=TARGET_WIDTH, height=TARGET_HEIGHT, format="rgb24")
         frame.pts, frame.time_base = self.next_timestamp()
         await asyncio.sleep(1 / 30)
@@ -42,7 +40,6 @@ class DummyVideoTrack(MediaStreamTrack):
         self.frame_count += 1
         timestamp = int((time.time() - self.start_time) * 90000)
         return timestamp, 90000
-
 
 class VideoReceiver:
     def __init__(self):
@@ -55,13 +52,12 @@ class VideoReceiver:
         try:
             self.latest_metadata = json.loads(json_str)
         except Exception as e:
-            print(f"⚠️ Kan metadata niet verwerken: {e}")
+            logging.error(f"⚠️ Kan metadata niet verwerken: {e}")
 
     def process_frame(self, frame: VideoFrame):
         image = frame.to_ndarray(format="rgb24")
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
-
 
         self.message_count += 1
         current_time = asyncio.get_event_loop().time()
@@ -73,10 +69,6 @@ class VideoReceiver:
             self.last_time = current_time
 
         metadata = self.latest_metadata
-
-        print(f"📋 Metadata in frame: {metadata}")
-
-
         overlay_lines = [
             f"FPS: {self.fps_display}",
             f"Frame ID: {metadata.get('frame_id', '-')}",
@@ -95,7 +87,6 @@ class VideoReceiver:
         cv2.imshow("WebRTC Video Stream", image)
         cv2.waitKey(1)
 
-
 async def wait_for_ice(pc):
     for _ in range(10):
         if pc.iceConnectionState in ["connected", "completed"]:
@@ -104,7 +95,6 @@ async def wait_for_ice(pc):
         await asyncio.sleep(1)
     logging.error("❌ ICE-verbinding is mislukt!")
     return False
-
 
 async def run():
     receiver = VideoReceiver()
@@ -120,8 +110,7 @@ async def run():
 
     signaling = WebSocketSignaling(SIGNALING_SERVER)
     pc = RTCPeerConnection(configuration)
-    dummy_video_track = DummyVideoTrack()
-    pc.addTrack(dummy_video_track)
+    pc.addTrack(DummyVideoTrack())
 
     @pc.on("connectionstatechange")
     async def on_connection_state_change():
@@ -157,7 +146,6 @@ async def run():
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Wacht op offer...")
 
-        # ✅ Wacht op OFFER van sender
         obj = await signaling.receive()
         if isinstance(obj, dict) and "sdp" in obj:
             await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
@@ -182,7 +170,6 @@ async def run():
         await signaling.close()
         cv2.destroyAllWindows()
         logging.info("✅ WebRTC gestopt en venster gesloten.")
-
 
 if __name__ == "__main__":
     try:

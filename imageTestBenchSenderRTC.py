@@ -1,16 +1,15 @@
 import asyncio
 import logging
-from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
-from aiortc.codecs import get_capabilities
-from av import VideoFrame
-from websocket_signaling import WebSocketSignaling
 import time
 import argparse
 import cv2
 import os
-from PIL import Image
-import numpy as np
 import json
+from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
+from aiortc.codecs import get_capabilities
+from av import VideoFrame
+from websocket_signaling import WebSocketSignaling
+from PIL import Image
 
 logging.basicConfig(level=logging.INFO)
 
@@ -79,7 +78,6 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         self.frame_count += 1
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-        # ✅ Stuur metadata via data channel
         if self.data_channel and self.data_channel.readyState == "open":
             metadata = {
                 "setup_description": SIGNALING_SERVER,
@@ -94,17 +92,16 @@ class ImageFolderStreamTrack(VideoStreamTrack):
             self.data_channel.send(json.dumps(metadata))
             logging.info(f"📤 Metadata verzonden: {metadata}")
         else:
-            logging.warning("Datachannel not open")
+            logging.warning("⚠️ Datachannel niet open")
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-        if self.frame_count % 1000 == 0:
+        if self.frame_count % 100 == 0:
             logging.info(f"📡 Verzonden frame #{self.frame_count}")
         await asyncio.sleep(FRAME_INTERVAL)
         return video_frame
-
 
 async def run():
     configuration = RTCConfiguration(iceServers=[
@@ -124,57 +121,41 @@ async def run():
         if event.candidate:
             logging.info(f"🧊 ICE-candidate: {event.candidate}")
 
-    # Voeg transceiver toe met VP8 voorkeur
     transceiver = pc.addTransceiver("video", direction="sendonly")
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
 
-    # ✅ Setup voor datachannel + wachten tot open
     metadata_channel_open = asyncio.Event()
 
     def wait_for_data_channel_open(channel):
         @channel.on("open")
         def on_open():
-            logging.info("✅ DataChannel is open")
+            logging.info("✅ DataChannel is open op sender")
             metadata_channel_open.set()
 
     data_channel = pc.createDataChannel("metadata")
     wait_for_data_channel_open(data_channel)
 
-    try:
-        await signaling.connect()
-        logging.info("✅ Verbonden met signaling server. Wacht op client...")
+    await signaling.connect()
+    logging.info("✅ Verbonden met signaling server. Stuur offer...")
 
-        while True:
-            obj = await signaling.receive()
-            if isinstance(obj, dict) and "sdp" in obj:
-                await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
-                answer = await pc.createAnswer()
-                await pc.setLocalDescription(answer)
-                await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
-                logging.info("🚀 WebRTC verbinding opgezet, wacht tot datachannel open is...")
+    offer = await pc.createOffer()
+    await pc.setLocalDescription(offer)
+    await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
-                # ✅ Wacht tot datachannel open is
-                await metadata_channel_open.wait()
+    obj = await signaling.receive()
+    if isinstance(obj, dict) and "sdp" in obj:
+        await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+        logging.info("📡 SDP answer ontvangen van receiver.")
 
-                # ✅ Start nu pas de videostream met de data_channel
-                pc.addTrack(ImageFolderStreamTrack(data_channel))
-                break  # Breek uit de while-loop, want SDP is afgehandeld
+    await metadata_channel_open.wait()
+    pc.addTrack(ImageFolderStreamTrack(data_channel))
 
-            elif obj is None:
-                break
+    while True:
+        await asyncio.sleep(1)
 
-    except Exception as e:
-        logging.error(f"❌ Fout: {e}")
-
-    finally:
-        logging.info("🛑 Verbinding sluiten...")
-        await pc.close()
-        await signaling.close()
-        logging.info("✅ Gesloten.")
-y
 if __name__ == "__main__":
     try:
         asyncio.run(run())
     except KeyboardInterrupt:
-        logging.info("🛑 Onderbroken door gebruiker.")
+        logging.info("🛑 Handmatige onderbreking. Programma wordt afgesloten.")
