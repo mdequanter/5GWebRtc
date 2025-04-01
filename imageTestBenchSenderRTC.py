@@ -124,12 +124,22 @@ async def run():
         if event.candidate:
             logging.info(f"🧊 ICE-candidate: {event.candidate}")
 
+    # Voeg transceiver toe met VP8 voorkeur
     transceiver = pc.addTransceiver("video", direction="sendonly")
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
 
+    # ✅ Setup voor datachannel + wachten tot open
+    metadata_channel_open = asyncio.Event()
+
+    def wait_for_data_channel_open(channel):
+        @channel.on("open")
+        def on_open():
+            logging.info("✅ DataChannel is open")
+            metadata_channel_open.set()
+
     data_channel = pc.createDataChannel("metadata")
-    pc.addTrack(ImageFolderStreamTrack(data_channel))
+    wait_for_data_channel_open(data_channel)
 
     try:
         await signaling.connect()
@@ -142,7 +152,15 @@ async def run():
                 answer = await pc.createAnswer()
                 await pc.setLocalDescription(answer)
                 await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
-                logging.info("🚀 WebRTC verbinding opgezet en streaming gestart.")
+                logging.info("🚀 WebRTC verbinding opgezet, wacht tot datachannel open is...")
+
+                # ✅ Wacht tot datachannel open is
+                await metadata_channel_open.wait()
+
+                # ✅ Start nu pas de videostream met de data_channel
+                pc.addTrack(ImageFolderStreamTrack(data_channel))
+                break  # Breek uit de while-loop, want SDP is afgehandeld
+
             elif obj is None:
                 break
 
