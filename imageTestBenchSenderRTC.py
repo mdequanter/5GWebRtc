@@ -128,9 +128,6 @@ async def run():
     data_channel = pc.createDataChannel("metadata")
     pc.addTrack(ImageFolderStreamTrack(data_channel))
 
-
-    pc.addTrack(ImageFolderStreamTrack())
-
     try:
         await signaling.connect()
         logging.info("✅ Verbonden met signaling server. Wacht op client...")
