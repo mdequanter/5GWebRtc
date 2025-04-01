@@ -78,7 +78,7 @@ class ImageFolderStreamTrack(VideoStreamTrack):
             video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
             video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-            size_kb = len(video_frame) / 1024
+            #size_kb = len(video_frame) / 1024
 
             # ✅ Voeg metadata toe aan frame
             width, height = video_frame.width, video_frame.height
@@ -90,7 +90,7 @@ class ImageFolderStreamTrack(VideoStreamTrack):
                 "filename": "image.jpg",
                 "timestamp": timestamp,
                 "resolution": f"{width}x{height}",
-                "size_kb": f"{size_kb}"
+                "size_kb": f"10"
             }
             video_frame.metadata = metadata
 
