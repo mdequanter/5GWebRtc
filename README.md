@@ -130,33 +130,20 @@ A screen recording of the live stream test in 640×480 resolution:
 
 ### 1. Mean FPS over Compressed Size
 
-![FPS over Size](./testbench/wifiLocal/stream_log_fps_mean_std_over_size_filtered.png)
+![image](https://github.com/user-attachments/assets/de932c1a-6b0c-4022-aacf-5deedd3375d8)
 
-- **FPS remains stable** (~22 FPS) for images ≤ 200 KB.
-- **Performance drops sharply** beyond 200 KB, hitting ~11 FPS at ~390 KB.
-- 🔎 *Recommendation*: Limit image size to ≤ 200 KB for real-time streaming.
 
----
+![image](https://github.com/user-attachments/assets/a0db4868-ee60-4e9b-8bb6-5569e99913fb)
+
 
 ### 2. Average Compression Time (JPEG Quality)
 
 ![Compression Time](./testbench/wifiLocal/stream_log_compression_time_ms_combined.png)
 
-- **Resolutions tested**: `640x480` and `800x600`.
-- **Compression time increases** with higher JPEG quality.
-  - 640x480: ~0.9 to 1.3 ms
-  - 800x600: ~1.2 to 2.0 ms
-- ⚖️ *Recommendation*: Use JPEG quality between 50–70% for real-time performance.
-
----
 
 ### 3. Average Encryption Time (JPEG Quality by File)
 
 ![Encryption Time](./testbench/wifiLocal/stream_log_encryption_time_ms_by_filename.png)
-
-- **Encryption overhead is low**, mostly between 0.1–0.6 ms.
-- **White noise images** consistently take more time to encrypt.
-- AES-256-CBC encryption scales slightly with file complexity and size.
 
 ---
 
