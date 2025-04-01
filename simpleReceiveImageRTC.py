@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--signaling_server",
     type=str,
-    default="ws://34.58.161.254:9000",
+    default="ws://34.46.183.47:9000",
     help="WebSocket Signaling Server URL (default: ws://34.58.161.254:9000)"
 )
 
@@ -101,9 +101,9 @@ async def run():
     #configuration = RTCConfiguration(iceServers=[RTCIceServer(urls="stun:stun.l.google.com:19302")])
 
     configuration = RTCConfiguration(iceServers=[
-        RTCIceServer(urls="stun:34.58.161.254:3478"),  # ← jouw VM IP
+        RTCIceServer(urls="stun:34.46.183.47:3478"),  # ← jouw VM IP
         RTCIceServer(
-            urls=["turn:34.58.161.254:3478?transport=udp"],
+            urls=["turn:34.46.183.47:3478?transport=udp"],
             username="unused",
             credential="J0eS3cret123"
         )
