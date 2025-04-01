@@ -152,17 +152,18 @@ async def run():
         @channel.on("message")
         def on_message(message):
             receiver.handle_metadata(message)
+
     try:
         await signaling.connect()
-        logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
+        logging.info("✅ Verbonden met WebRTC Signaling Server... Wacht op offer...")
 
-        offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
-
+        # ✅ Wacht op OFFER van sender
         obj = await signaling.receive()
         if isinstance(obj, dict) and "sdp" in obj:
             await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+            await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
         if not await wait_for_ice(pc):
             raise Exception("ICE-verbinding mislukt!")
