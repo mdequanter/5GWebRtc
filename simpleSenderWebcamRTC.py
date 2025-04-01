@@ -68,7 +68,7 @@ async def run():
     configuration = RTCConfiguration(iceServers=[
         RTCIceServer(urls="stun:34.46.183.47:3478"),
         RTCIceServer(
-            urls=["turn:34.58.161.254:3478?transport=udp"],
+            urls=["turn:34.46.183.47:3478?transport=udp"],
             username="unused",
             credential="J0eS3cret123"
         )
