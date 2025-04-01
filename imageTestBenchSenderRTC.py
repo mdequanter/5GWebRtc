@@ -24,7 +24,7 @@ args = parser.parse_args()
 SIGNALING_SERVER = args.signaling_server
 
 IMAGE_FOLDER = "test_images"
-JPEG_QUALITIES = [20, 40, 60, 80]
+JPEG_QUALITIES = [20,25,30,35,40,45,50,55,60,65,70,75,80,85,90]
 SECONDS_PER_QUALITY = 5
 FPS = 20
 FRAME_INTERVAL = 1 / FPS
@@ -73,8 +73,6 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         except StopIteration:
             await asyncio.sleep(1)
             raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        cv2.putText(frame, f"Time: {timestamp}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         video_frame.pts, video_frame.time_base = await self.next_timestamp()
