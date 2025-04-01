@@ -4,7 +4,7 @@ import logging
 import json
 import time
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 from aiortc import (
@@ -73,12 +73,21 @@ class VideoReceiver:
             self.message_count = 0
             self.last_time = current_time
 
+
+
+        timestamp = datetime.now() - timedelta(milliseconds=offset_time)
+
+
+        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+
         timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         cv2.putText(image, f"Time: {timestamp_str}", (10, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
+        cv2.putText(image, f"offset: {offset_time} ms", (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        cv2.putText(image, f"FPS: {self.fps_display}", (10, 90),
+        cv2.putText(image, f"FPS: {self.fps_display}", (10, 120),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2, cv2.LINE_AA)
 
         cv2.imshow("WebRTC Video Stream", image)
@@ -111,11 +120,12 @@ async def time_sync(signaling):
     round_trip = (response_rx - request_tx).total_seconds()
     turn_around = (response_tx - request_tx_remote).total_seconds()
     delay = ((round_trip - turn_around) / 2)*1000
+
     return delay
 
 async def run():
 
-    global offset_ms
+    global offset_time
 
     configuration = RTCConfiguration(iceServers=[
         RTCIceServer(urls="stun:34.46.183.47:3478"),
@@ -169,11 +179,11 @@ async def run():
 
 
 
-        offset_ms = await time_sync(signaling)
+        offset_time = await time_sync(signaling)
+
                
         offer = await pc.createOffer()
         await pc.setLocalDescription(offer)
-        print ("send offer ...................")
         await signaling.send({"sdp": pc.localDescription.sdp, "type": pc.localDescription.type})
 
         obj = await signaling.receive()
