@@ -76,48 +76,52 @@ class DummyVideoTrack(MediaStreamTrack):
         timestamp = int((time.time() - self.start_time) * 90000)
         return timestamp, 90000  # 90 kHz tijdsbase
 
-class VideoReceiver:
-    """ Klasse voor het ontvangen en tonen van WebRTC-videostream. """
-    
-    def __init__(self):
-        self.fps_display = 0
-        self.message_count = 0
-        self.last_time = asyncio.get_event_loop().time()
-
-    def process_frame(self, frame: VideoFrame):
-        image = frame.to_ndarray(format="rgb24")
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
-
-        self.message_count += 1
-        current_time = asyncio.get_event_loop().time()
-        elapsed_time = current_time - self.last_time
-
-        if elapsed_time >= 1.0:
-            self.fps_display = self.message_count
+    class VideoReceiver:
+        def __init__(self):
+            self.fps_display = 0
             self.message_count = 0
-            self.last_time = current_time
+            self.last_time = asyncio.get_event_loop().time()
+            self.latest_metadata = {}
 
-        metadata = getattr(frame, 'metadata', {})
+        def handle_metadata(self, json_str):
+            try:
+                self.latest_metadata = json.loads(json_str)
+            except Exception as e:
+                print(f"⚠️ Kan metadata niet verwerken: {e}")
 
-        # ✅ Overlay van metadata op het scherm
-        overlay_lines = [
-            f"FPS: {self.fps_display}",
-            f"Frame ID: {metadata.get('frame_id', '-')}",
-            f"Time: {metadata.get('timestamp', '-')}",
-            f"Resolution: {metadata.get('resolution', '-')}",
-            f"Filename: {metadata.get('filename', '-')}",
-            f"Quality: {metadata.get('jpeg_quality', '-')}",
-            f"Size: {metadata.get('size_kb', '-')} KB",
-            f"Setup: {metadata.get('setup_description', '-')[:30]}"
-        ]
+        def process_frame(self, frame: VideoFrame):
+            image = frame.to_ndarray(format="rgb24")
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            image = cv2.resize(image, (TARGET_WIDTH, TARGET_HEIGHT))
 
-        for i, line in enumerate(overlay_lines):
-            cv2.putText(image, line, (10, 30 + i*30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+            self.message_count += 1
+            current_time = asyncio.get_event_loop().time()
+            elapsed_time = current_time - self.last_time
 
-        cv2.imshow("WebRTC Video Stream", image)
-        cv2.waitKey(1)
+            if elapsed_time >= 1.0:
+                self.fps_display = self.message_count
+                self.message_count = 0
+                self.last_time = current_time
+
+            metadata = self.latest_metadata
+            overlay_lines = [
+                f"FPS: {self.fps_display}",
+                f"Frame ID: {metadata.get('frame_id', '-')}",
+                f"Time: {metadata.get('timestamp', '-')}",
+                f"Resolution: {metadata.get('resolution', '-')}",
+                f"Filename: {metadata.get('filename', '-')}",
+                f"Quality: {metadata.get('jpeg_quality', '-')}",
+                f"Size: {metadata.get('size_kb', '-')} KB",
+                f"Setup: {metadata.get('setup_description', '-')[:30]}"
+            ]
+
+            for i, line in enumerate(overlay_lines):
+                cv2.putText(image, line, (10, 30 + i*30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+
+            cv2.imshow("WebRTC Video Stream", image)
+            cv2.waitKey(1)
+
 
 
 
@@ -172,7 +176,19 @@ async def run():
                         logging.info(f"❌ Fout bij video-ontvangst: {e}", exc_info=True)
 
             asyncio.create_task(receive_video())
+
+
+    @pc.on("datachannel")
+    def on_datachannel(channel):
+        logging.info(f"📨 DataChannel geopend: {channel.label}")
+
+        @channel.on("message")
+        def on_message(message):
+            receiver.handle_metadata(message)
+
+
     try:
+        receiver = VideoReceiver()        
         await signaling.connect()
         logging.info("✅ Verbonden met WebRTC Signaling Server... Verstuur offer naar sender...")
 

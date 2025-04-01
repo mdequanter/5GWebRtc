@@ -10,6 +10,7 @@ import cv2
 import os
 from PIL import Image
 import numpy as np
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,8 +34,9 @@ FRAMES_PER_QUALITY = SECONDS_PER_QUALITY * FPS
 class ImageFolderStreamTrack(VideoStreamTrack):
     kind = "video"
 
-    def __init__(self):
+    def __init__(self, data_channel):
         super().__init__()
+        self.data_channel = data_channel
         self.image_files = sorted([
             f for f in os.listdir(IMAGE_FOLDER)
             if f.lower().endswith((".jpg", ".jpeg", ".png"))
@@ -60,7 +62,7 @@ class ImageFolderStreamTrack(VideoStreamTrack):
                 img_array = cv2.imdecode(enc_frame, cv2.IMREAD_COLOR)
                 resized = cv2.resize(img_array, (width, height))
                 for _ in range(FRAMES_PER_QUALITY):
-                    yield resized
+                    yield resized, image_file, width, height, quality
 
     async def next_timestamp(self):
         self.frame_count += 1
@@ -68,36 +70,38 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         return timestamp, 90000
 
     async def recv(self):
-            try:
-                frame = next(self.frames)
-            except StopIteration:
-                await asyncio.sleep(1)
-                raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
+        try:
+            frame, image_file, width, height, quality = next(self.frames)
+        except StopIteration:
+            await asyncio.sleep(1)
+            raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-            video_frame.pts, video_frame.time_base = await self.next_timestamp()
+        self.frame_count += 1
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
-            #size_kb = len(video_frame) / 1024
-
-            # ✅ Voeg metadata toe aan frame
-            width, height = video_frame.width, video_frame.height
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        # ✅ Stuur metadata via data channel
+        if self.data_channel and self.data_channel.readyState == "open":
             metadata = {
                 "setup_description": SIGNALING_SERVER,
                 "frame_id": str(self.frame_count),
                 "type": "test",
-                "filename": "image.jpg",
+                "filename": image_file,
                 "timestamp": timestamp,
                 "resolution": f"{width}x{height}",
-                "size_kb": f"10"
+                "jpeg_quality": str(quality),
+                "size_kb": "n/a"
             }
-            video_frame.metadata = metadata
+            self.data_channel.send(json.dumps(metadata))
 
-            if self.frame_count % 30 == 0:
-                logging.info(f"📡 Verzonden frame #{self.frame_count}")
-            await asyncio.sleep(FRAME_INTERVAL)
-            return video_frame
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+        video_frame.pts, video_frame.time_base = await self.next_timestamp()
+
+        if self.frame_count % 30 == 0:
+            logging.info(f"📡 Verzonden frame #{self.frame_count}")
+        await asyncio.sleep(FRAME_INTERVAL)
+        return video_frame
+
 
 async def run():
     configuration = RTCConfiguration(iceServers=[
@@ -120,6 +124,10 @@ async def run():
     transceiver = pc.addTransceiver("video", direction="sendonly")
     video_codecs = [c for c in get_capabilities("video").codecs if c.name == "VP8"]
     transceiver.setCodecPreferences(video_codecs)
+
+    data_channel = pc.createDataChannel("metadata")
+    pc.addTrack(ImageFolderStreamTrack(data_channel))
+
 
     pc.addTrack(ImageFolderStreamTrack())
 
