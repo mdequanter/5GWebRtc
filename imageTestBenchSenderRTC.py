@@ -68,18 +68,36 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         return timestamp, 90000
 
     async def recv(self):
-        try:
-            frame = next(self.frames)
-        except StopIteration:
-            await asyncio.sleep(1)
-            raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = await self.next_timestamp()
-        if self.frame_count % 30 == 0:
-            logging.info(f"📡 Verzonden frame #{self.frame_count}")
-        await asyncio.sleep(FRAME_INTERVAL)
-        return video_frame
+            try:
+                frame = next(self.frames)
+            except StopIteration:
+                await asyncio.sleep(1)
+                raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+            video_frame.pts, video_frame.time_base = await self.next_timestamp()
+
+            size_kb = len(video_frame) / 1024
+
+            # ✅ Voeg metadata toe aan frame
+            width, height = video_frame.width, video_frame.height
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            metadata = {
+                "setup_description": SIGNALING_SERVER,
+                "frame_id": str(self.frame_count),
+                "type": "test",
+                "filename": "image.jpg",
+                "timestamp": timestamp,
+                "resolution": f"{width}x{height}",
+                "size_kb": f"{size_kb}"
+            }
+            video_frame.metadata = metadata
+
+            if self.frame_count % 30 == 0:
+                logging.info(f"📡 Verzonden frame #{self.frame_count}")
+            await asyncio.sleep(FRAME_INTERVAL)
+            return video_frame
 
 async def run():
     configuration = RTCConfiguration(iceServers=[
