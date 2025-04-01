@@ -24,7 +24,7 @@ args = parser.parse_args()
 SIGNALING_SERVER = args.signaling_server
 
 # Resolutie
-WIDTH, HEIGHT = 320, 240
+WIDTH, HEIGHT = 640, 480
 
 # Webcam openen
 capture = cv2.VideoCapture(0)
