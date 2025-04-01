@@ -72,8 +72,9 @@ class ImageFolderStreamTrack(VideoStreamTrack):
         try:
             frame, image_file, width, height, quality = next(self.frames)
         except StopIteration:
-            await asyncio.sleep(1)
-            raise asyncio.CancelledError("✅ Alle frames zijn verzonden.")
+            logging.info("🔁 Herstart framegenerator")
+            self.frames = self._generate_frames()
+            frame, image_file, width, height, quality = next(self.frames)
 
         self.frame_count += 1
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -148,8 +149,8 @@ async def run():
         await pc.setRemoteDescription(RTCSessionDescription(sdp=obj["sdp"], type=obj["type"]))
         logging.info("📡 SDP answer ontvangen van receiver.")
 
-    await metadata_channel_open.wait()
     pc.addTrack(ImageFolderStreamTrack(data_channel))
+    await metadata_channel_open.wait()
 
     while True:
         await asyncio.sleep(1)

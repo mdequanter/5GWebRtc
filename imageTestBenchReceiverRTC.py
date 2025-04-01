@@ -124,6 +124,7 @@ async def run():
                 while True:
                     try:
                         frame = await track.recv()
+                        logging.info("📥 Frame ontvangen")
                         receiver.process_frame(frame)
                     except Exception as e:
                         logging.info(f"❌ Fout bij video-ontvangst: {e}")
